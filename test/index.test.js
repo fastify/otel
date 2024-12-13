@@ -68,11 +68,13 @@ describe('FastifyInstrumentation', () => {
   const memoryExporter = new InMemorySpanExporter()
   const provider = new NodeTracerProvider()
   const spanProcessor = new SimpleSpanProcessor(memoryExporter)
-  describe('Instrumentation#disabled', () => {
-    instrumentation.setTracerProvider(provider)
-    httpInstrumentation.setTracerProvider(provider)
-    context.setGlobalContextManager(contextManager)
 
+  provider.addSpanProcessor(spanProcessor)
+  context.setGlobalContextManager(contextManager)
+  httpInstrumentation.setTracerProvider(provider)
+  instrumentation.setTracerProvider(provider)
+
+  describe('Instrumentation#disabled', () => {
     test('should not create spans if disabled', async t => {
       before(() => {
         contextManager.enable()
@@ -112,8 +114,10 @@ describe('FastifyInstrumentation', () => {
     })
   })
 
-  describe('Instrumentation#enabled', () => {
+  describe('Instrumentation#enabled', { only: true }, () => {
     beforeEach(() => {
+      instrumentation.enable()
+      httpInstrumentation.enable()
       contextManager.enable()
     })
 
@@ -125,7 +129,7 @@ describe('FastifyInstrumentation', () => {
       memoryExporter.reset()
     })
 
-    test('should anonymous span', async t => {
+    test('should create anonymous span (simple case)', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
 
@@ -133,23 +137,168 @@ describe('FastifyInstrumentation', () => {
 
       app.get('/', async (request, reply) => 'hello world')
 
-      t.plan(3)
+      await app.listen()
 
-      //  Might need to call HTTP
-      const response = await app.inject({
-        method: 'GET',
-        url: '/'
-      })
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
 
-      console.log(spans)
+      const [end, start] = spans
 
-      t.assert.ok(spans == null)
-      t.assert.equal(response.statusCode, 200)
-      t.assert.equal(response.body, 'hello world')
+      t.plan(6)
+      t.assert.equal(spans.length, 2)
+      t.assert.ok(
+        spans.every(
+          span =>
+            span.ended === true &&
+            span.spanContext().spanId !== null &&
+            ['request-handler', 'hook'].includes(
+              span.attributes['fastify.type']
+            )
+        )
+      )
+      t.assert.deepStrictEqual(start.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - onRequest',
+        'fastify.type': 'hook',
+        'hook.callback.name': '@fastify/otel',
+        'http.route': '/'
+      })
+      t.assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'hook.callback.name': 'anonymous'
+      })
+      t.assert.equal(response.status, 200)
+      t.assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should create named span (simple case)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [end, start] = spans
+
+      t.plan(6)
+      t.assert.equal(spans.length, 2)
+      t.assert.ok(
+        spans.every(
+          span =>
+            span.ended === true &&
+            span.spanContext().spanId !== null &&
+            ['request-handler', 'hook'].includes(
+              span.attributes['fastify.type']
+            )
+        )
+      )
+      t.assert.deepStrictEqual(start.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - onRequest',
+        'fastify.type': 'hook',
+        'hook.callback.name': '@fastify/otel',
+        'http.route': '/'
+      })
+      t.assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'hook.callback.name': 'helloworld'
+      })
+      t.assert.equal(response.status, 200)
+      t.assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should end spans upon error', { only: true }, async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get(
+        '/',
+        {
+          onError: function decorated (request, reply, error, done) {
+            done(error)
+          }
+        },
+        async function helloworld () {
+          throw new Error('error')
+        }
+      )
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [end, start, error] = spans
+
+      t.plan(7)
+      t.assert.equal(spans.length, 3)
+      t.assert.ok(
+        spans.every(
+          span =>
+            span.ended === true &&
+            span.spanContext().spanId !== null &&
+            ['request-handler', 'hook', 'route-hook'].includes(
+              span.attributes['fastify.type']
+            )
+        )
+      )
+      t.assert.deepStrictEqual(start.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - onRequest',
+        'fastify.type': 'hook',
+        'hook.callback.name': '@fastify/otel',
+        'http.route': '/'
+      })
+      t.assert.deepStrictEqual(error.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - route -> onError',
+        'fastify.type': 'route-hook',
+        'hook.callback.name': 'decorated',
+        'http.route': '/'
+      })
+      t.assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'hook.callback.name': 'helloworld'
+      })
+      t.assert.equal(response.status, 500)
+      t.assert.deepStrictEqual(await response.json(), {
+        statusCode: 500,
+        error: 'Internal Server Error',
+        message: 'error'
+      })
     })
   })
 })

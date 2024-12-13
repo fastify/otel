@@ -1,6 +1,7 @@
 'use strict'
 const { context, trace, SpanStatusCode } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
+const { ATTR_HTTP_ROUTE } = require('@opentelemetry/semantic-conventions')
 const {
   InstrumentationBase,
   InstrumentationNodeModuleDefinition
@@ -22,7 +23,8 @@ const FASTIFY_HOOKS = [
   'preHandler',
   'preSerialization',
   'onSend',
-  'onResponse'
+  'onResponse',
+  'onError'
 ]
 const ATTRIBUTE_NAMES = {
   HOOK_NAME: 'hook.name',
@@ -75,8 +77,9 @@ class FastifyInstrumentation extends InstrumentationBase {
 
             if (typeof handlerLike === 'function') {
               routeOptions[hook] = handlerWrapper(handlerLike, {
-                [ATTRIBUTE_NAMES.HOOK_NAME]: `route-${hook}`,
+                [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route -> ${hook}`,
                 [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.ROUTE,
+                [ATTR_HTTP_ROUTE]: routeOptions.url,
                 [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
                   handlerLike.name ?? ANONYMOUS_FUNCTION_NAME
               })
@@ -86,8 +89,9 @@ class FastifyInstrumentation extends InstrumentationBase {
               for (const handler of handlerLike) {
                 wrappedHandlers.push(
                   handlerWrapper(handler, {
-                    [ATTRIBUTE_NAMES.HOOK_NAME]: `route-${hook}`,
+                    [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route -> ${hook}`,
                     [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.ROUTE,
+                    [ATTR_HTTP_ROUTE]: routeOptions.url,
                     [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
                       handler.name ?? ANONYMOUS_FUNCTION_NAME
                   })
@@ -99,11 +103,32 @@ class FastifyInstrumentation extends InstrumentationBase {
           }
         }
 
+        // We always want to add the onSend hook to the route to be executed last
+        if (routeOptions.onSend != null) {
+          routeOptions.onSend = Array.isArray(routeOptions.onSend)
+            ? [...routeOptions.onSend, onSendHook]
+            : [routeOptions.onSend, onSendHook]
+        } else {
+          routeOptions.onSend = onSendHook
+        }
+
+        // We always want to add the onError hook to the route to be executed last
+        if (routeOptions.onError != null) {
+          routeOptions.onError = Array.isArray(routeOptions.onError)
+            ? [...routeOptions.onError, onErrorHook]
+            : [routeOptions.onError, onErrorHook]
+        } else {
+          routeOptions.onError = onErrorHook
+        }
+
         routeOptions.handler = handlerWrapper(routeOptions.handler, {
-          [ATTRIBUTE_NAMES.HOOK_NAME]: 'route-handler',
+          [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route-handler`,
           [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.HANDLER,
+          [ATTR_HTTP_ROUTE]: routeOptions.url,
           [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-            routeOptions.handler.name ?? ANONYMOUS_FUNCTION_NAME
+            routeOptions.handler.name.length > 0
+              ? routeOptions.handler.name
+              : ANONYMOUS_FUNCTION_NAME
         })
       })
 
@@ -121,9 +146,10 @@ class FastifyInstrumentation extends InstrumentationBase {
           const span = this[kInstrumentation].tracer.startSpan('request', {
             attributes: {
               // TODO: abstract to constants
-              'hook.name': 'onRequest',
-              'fastify.type': 'hook',
-              'plugin.name': '@fastify/otel'
+              [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - onRequest`,
+              [ATTRIBUTE_NAMES.FASTIFY_TYPE]: 'hook',
+              [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]: '@fastify/otel',
+              [ATTR_HTTP_ROUTE]: request.routeOptions.url
             }
           })
 
@@ -133,7 +159,11 @@ class FastifyInstrumentation extends InstrumentationBase {
         hookDone()
       })
 
-      instance.addHook('onResponse', function (request, _reply, hookDone) {
+      instance.addHook = addHookPatched.bind(instance)
+
+      done()
+
+      function onSendHook (request, _reply, payload, hookDone) {
         const spans = request[kRequestSpans]
 
         if (spans != null && spans.length !== 0) {
@@ -148,10 +178,10 @@ class FastifyInstrumentation extends InstrumentationBase {
 
         request[kRequestSpans] = null
 
-        hookDone()
-      })
+        hookDone(null, payload)
+      }
 
-      instance.addHook('onError', function (request, _reply, error, hookDone) {
+      function onErrorHook (request, reply, error, hookDone) {
         const spans = request[kRequestSpans]
 
         if (spans != null && spans.length !== 0) {
@@ -168,18 +198,14 @@ class FastifyInstrumentation extends InstrumentationBase {
         request[kRequestSpans] = null
 
         hookDone()
-      })
-
-      instance.addHook = addHookPatched.bind(instance)
-
-      done()
+      }
 
       function addHookPatched (name, hook) {
         if (FASTIFY_HOOKS.includes(name)) {
           addHookOriginal(
             name,
             handlerWrapper(hook, {
-              [ATTRIBUTE_NAMES.HOOK_NAME]: name,
+              [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - ${name}`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
                 hook.name ?? ANONYMOUS_FUNCTION_NAME
@@ -191,22 +217,27 @@ class FastifyInstrumentation extends InstrumentationBase {
       }
 
       function handlerWrapper (handler, spanAttributes = {}) {
-        return function (...args) {
-          const instrumenation = this[kInstrumentation]
+        return function handlerWrapped (...args) {
+          const instrumentation = this[kInstrumentation]
 
-          if (instrumenation.isEnabled() === false) {
+          if (instrumentation.isEnabled() === false) {
             return handler.call(this, ...args)
           }
 
-          const span = instrumenation.tracer.startSpan('request', {
-            attributes: spanAttributes
-          })
+          const span = instrumentation.tracer.startSpan(
+            `handler - ${
+              handler.name?.length > 0
+                ? handler.name
+                : this.pluginName ?? ANONYMOUS_FUNCTION_NAME
+            }`,
+            {
+              attributes: spanAttributes
+            }
+          )
 
-          console.log(args)
           args[0][kRequestSpans].push(span)
 
           return context.with(
-            context.active(),
             trace.setSpan(context.active(), span),
             function () {
               try {
