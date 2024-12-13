@@ -218,6 +218,7 @@ class FastifyInstrumentation extends InstrumentationBase {
 
       function handlerWrapper (handler, spanAttributes = {}) {
         return function handlerWrapped (...args) {
+          /** @type {FastifyInstrumentation} */
           const instrumentation = this[kInstrumentation]
 
           if (instrumentation.isEnabled() === false) {
