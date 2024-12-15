@@ -212,7 +212,177 @@ describe('FastifyInstrumentation', () => {
       t.assert.equal(await response.text(), 'hello world')
     })
 
-    test('should end spans upon error', { only: true }, async t => {
+    test('should create named span (404)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`,
+        { method: 'POST' }
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [start] = spans
+
+      t.plan(3)
+      t.assert.equal(response.status, 404)
+      t.assert.equal(spans.length, 1)
+      t.assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'http.request.method': 'POST',
+        'http.response.status_code': 404
+      })
+    })
+
+    test('should create named span (404 - customized)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.setNotFoundHandler(async function notFoundHandler (request, reply) {
+        reply.code(404).send('not found')
+      })
+
+      app.get('/', async function helloworld () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`,
+        { method: 'POST' }
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [start, fof] = spans
+
+      t.plan(4)
+      t.assert.equal(response.status, 404)
+      t.assert.equal(spans.length, 2)
+      t.assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'http.request.method': 'POST',
+        'http.response.status_code': 404
+      })
+      t.assert.deepStrictEqual(fof.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - not-found-handler',
+        'fastify.type': 'hook',
+        'hook.callback.name': 'notFoundHandler'
+      })
+    })
+
+    test('should create named span (404 - customized with hooks)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.setNotFoundHandler(
+        {
+          preHandler: function preHandler (request, reply, done) {
+            done()
+          },
+          preValidation: function preValidation (request, reply, done) {
+            done()
+          }
+        },
+        async function notFoundHandler (request, reply) {
+          reply.code(404).send('not found')
+        }
+      )
+
+      app.get(
+        '/',
+        {
+          schema: {
+            headers: {
+              type: 'object',
+              properties: {
+                'x-foo': { type: 'string' }
+              }
+            }
+          }
+        },
+        async function helloworld () {
+          return 'hello world'
+        }
+      )
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`,
+        { method: 'POST' }
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [preHandler, preValidation, start, fof] = spans
+
+      t.plan(9)
+      t.assert.equal(response.status, 404)
+      t.assert.equal(spans.length, 4)
+      t.assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'http.request.method': 'POST',
+        'http.response.status_code': 404
+      })
+      t.assert.deepStrictEqual(preHandler.attributes, {
+        'hook.name':
+          'fastify -> @fastify/otel@0.0.0 - not-found-handler - preHandler',
+        'fastify.type': 'hook',
+        'hook.callback.name': 'preHandler'
+      })
+      t.assert.deepStrictEqual(preValidation.attributes, {
+        'hook.name':
+          'fastify -> @fastify/otel@0.0.0 - not-found-handler - preValidation',
+        'fastify.type': 'hook',
+        'hook.callback.name': 'preValidation'
+      })
+      t.assert.deepStrictEqual(fof.attributes, {
+        'hook.name': 'fastify -> @fastify/otel@0.0.0 - not-found-handler',
+        'fastify.type': 'hook',
+        'hook.callback.name': 'anonymous'
+      })
+      t.assert.equal(fof.parentSpanId, start.spanContext().spanId)
+      t.assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
+      t.assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+    })
+
+    /**
+     * Note: Spans does not seem yet to be connected through the parent
+     * Most likely as we are not using the span made on the onRequest hook
+     * and setting it as parent
+     * Find a way to link the root span made from the onRequst down to the childs
+     */
+    test('should end spans upon error', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
 

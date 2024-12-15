@@ -152,6 +152,7 @@ class FastifyInstrumentation extends InstrumentationBase {
             rpcMetadata.route = request.routeOptions.url
           }
 
+          /** @type {Span} */
           const span = this[kInstrumentation].tracer.startSpan('request', {
             attributes: {
               [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
@@ -167,7 +168,28 @@ class FastifyInstrumentation extends InstrumentationBase {
         hookDone()
       })
 
+      // onResponse is the last hook to be executed, only added for 404 handlers
+      instance.addHook('onResponse', function (request, reply, hookDone) {
+        const span = request[kRequestSpans]
+
+        if (span != null) {
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: 'OK'
+          })
+          span.setAttributes({
+            [ATTR_HTTP_RESPONSE_STATUS_CODE]: 404
+          })
+          span.end()
+        }
+
+        request[kRequestSpans] = null
+
+        hookDone()
+      })
+
       instance.addHook = addHookPatched.bind(instance)
+      instance.setNotFoundHandler = setNotFoundHandlerPatched.bind(instance)
 
       done()
 
@@ -221,6 +243,44 @@ class FastifyInstrumentation extends InstrumentationBase {
           )
         } else {
           addHookOriginal(name, hook)
+        }
+      }
+
+      function setNotFoundHandlerPatched (hooks, handler) {
+        if (typeof hooks === 'function') {
+          handler = handlerWrapper(hooks, {
+            [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
+            [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
+            [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
+              hooks.name ?? ANONYMOUS_FUNCTION_NAME
+          })
+          setNotFoundHandlerOriginal(handler)
+        } else {
+          if (hooks.preValidation != null) {
+            hooks.preValidation = handlerWrapper(hooks.preValidation, {
+              [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preValidation`,
+              [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
+              [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
+                hooks.preValidation.name ?? ANONYMOUS_FUNCTION_NAME
+            })
+          }
+
+          if (hooks.preHandler != null) {
+            hooks.preHandler = handlerWrapper(hooks.preHandler, {
+              [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preHandler`,
+              [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
+              [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
+                hooks.preHandler.name ?? ANONYMOUS_FUNCTION_NAME
+            })
+          }
+
+          handler = handlerWrapper(handler, {
+            [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
+            [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
+            [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
+              hooks.name ?? ANONYMOUS_FUNCTION_NAME
+          })
+          setNotFoundHandlerOriginal(hooks, handler)
         }
       }
 
