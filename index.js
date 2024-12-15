@@ -46,6 +46,7 @@ const ANONYMOUS_FUNCTION_NAME = 'anonymous'
 // Symbols
 const kInstrumentation = Symbol('fastify instrumentation instance')
 const kRequestSpans = Symbol('fastify instrumentation request spans')
+const kRequestContext = Symbol('fastify instrumentation request context')
 
 class FastifyInstrumentation extends InstrumentationBase {
   static FastifyInstrumentation = FastifyInstrumentation
@@ -71,9 +72,12 @@ class FastifyInstrumentation extends InstrumentationBase {
 
     function FastifyInstrumentationPlugin (instance, opts, done) {
       const addHookOriginal = instance.addHook.bind(instance)
+      const setNotFoundHandlerOriginal =
+        instance.setNotFoundHandler.bind(instance)
 
       instance.decorate(kInstrumentation, instrumentation)
       instance.decorateRequest(kRequestSpans, null)
+      instance.decorateRequest(kRequestContext, null)
 
       instance.addHook('onRoute', function (routeOptions) {
         for (const hook of FASTIFY_HOOKS) {
@@ -156,7 +160,8 @@ class FastifyInstrumentation extends InstrumentationBase {
             }
           })
 
-          request[kRequestSpans] = [span]
+          request[kRequestContext] = trace.setSpan(context.active(), span)
+          request[kRequestSpans] = span
         }
 
         hookDone()
@@ -166,17 +171,19 @@ class FastifyInstrumentation extends InstrumentationBase {
 
       done()
 
-      function onSendHook (request, _reply, payload, hookDone) {
-        const spans = request[kRequestSpans]
+      function onSendHook (request, reply, payload, hookDone) {
+        /** @type {import('@opentelemetry/api').Span} */
+        const span = request[kRequestSpans]
 
-        if (spans != null && spans.length !== 0) {
-          for (const span of spans) {
-            span.setStatus({
-              code: SpanStatusCode.OK,
-              message: 'OK'
-            })
-            span.end()
-          }
+        if (span != null) {
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: 'OK'
+          })
+          span.setAttributes({
+            [ATTR_HTTP_RESPONSE_STATUS_CODE]: reply.statusCode
+          })
+          span.end()
         }
 
         request[kRequestSpans] = null
@@ -185,17 +192,15 @@ class FastifyInstrumentation extends InstrumentationBase {
       }
 
       function onErrorHook (request, reply, error, hookDone) {
-        const spans = request[kRequestSpans]
+        const span = request[kRequestSpans]
 
-        if (spans != null && spans.length !== 0) {
-          for (const span of spans) {
-            span.setStatus({
-              code: SpanStatusCode.ERROR,
-              message: error.message
-            })
-            span.recordException(error)
-            span.end()
-          }
+        if (span != null) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error.message
+          })
+          span.recordException(error)
+          span.end()
         }
 
         request[kRequestSpans] = null
@@ -223,11 +228,13 @@ class FastifyInstrumentation extends InstrumentationBase {
         return function handlerWrapped (...args) {
           /** @type {FastifyInstrumentation} */
           const instrumentation = this[kInstrumentation]
+          const [request] = args
 
           if (instrumentation.isEnabled() === false) {
             return handler.call(this, ...args)
           }
 
+          const ctx = request[kRequestContext]
           const span = instrumentation.tracer.startSpan(
             `handler - ${
               handler.name?.length > 0
@@ -236,13 +243,12 @@ class FastifyInstrumentation extends InstrumentationBase {
             }`,
             {
               attributes: spanAttributes
-            }
+            },
+            ctx
           )
 
-          args[0][kRequestSpans].push(span)
-
           return context.with(
-            trace.setSpan(context.active(), span),
+            trace.setSpan(ctx, span),
             function () {
               try {
                 const res = handler.call(this, ...args)

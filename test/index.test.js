@@ -264,6 +264,8 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
+      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
+      t.assert.equal(error.parentSpanId, start.spanContext().spanId)
       t.assert.equal(response.status, 500)
       t.assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
