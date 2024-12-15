@@ -1,7 +1,11 @@
 'use strict'
 const { context, trace, SpanStatusCode } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
-const { ATTR_HTTP_ROUTE } = require('@opentelemetry/semantic-conventions')
+const {
+  ATTR_HTTP_ROUTE,
+  ATTR_HTTP_RESPONSE_STATUS_CODE,
+  ATTR_HTTP_REQUEST_METHOD
+} = require('@opentelemetry/semantic-conventions')
 const {
   InstrumentationBase,
   InstrumentationNodeModuleDefinition
@@ -29,7 +33,8 @@ const FASTIFY_HOOKS = [
 const ATTRIBUTE_NAMES = {
   HOOK_NAME: 'hook.name',
   FASTIFY_TYPE: 'fastify.type',
-  HOOK_CALLBACK_NAME: 'hook.callback.name'
+  HOOK_CALLBACK_NAME: 'hook.callback.name',
+  ROOT: 'fastify.root',
 }
 const HOOK_TYPES = {
   ROUTE: 'route-hook',
@@ -145,11 +150,9 @@ class FastifyInstrumentation extends InstrumentationBase {
 
           const span = this[kInstrumentation].tracer.startSpan('request', {
             attributes: {
-              // TODO: abstract to constants
-              [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - onRequest`,
-              [ATTRIBUTE_NAMES.FASTIFY_TYPE]: 'hook',
-              [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]: '@fastify/otel',
-              [ATTR_HTTP_ROUTE]: request.routeOptions.url
+              [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
+              [ATTR_HTTP_ROUTE]: request.url,
+              [ATTR_HTTP_REQUEST_METHOD]: request.method
             }
           })
 
