@@ -27,14 +27,13 @@ const FASTIFY_HOOKS = [
   'preHandler',
   'preSerialization',
   'onSend',
-  'onResponse',
-  'onError'
+  'onResponse'
 ]
 const ATTRIBUTE_NAMES = {
   HOOK_NAME: 'hook.name',
   FASTIFY_TYPE: 'fastify.type',
   HOOK_CALLBACK_NAME: 'hook.callback.name',
-  ROOT: 'fastify.root',
+  ROOT: 'fastify.root'
 }
 const HOOK_TYPES = {
   ROUTE: 'route-hook',
@@ -90,7 +89,9 @@ class FastifyInstrumentation extends InstrumentationBase {
                 [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.ROUTE,
                 [ATTR_HTTP_ROUTE]: routeOptions.url,
                 [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                  handlerLike.name ?? ANONYMOUS_FUNCTION_NAME
+                  handlerLike.name?.length > 0
+                    ? handlerLike.name
+                    : ANONYMOUS_FUNCTION_NAME
               })
             } else if (Array.isArray(handlerLike)) {
               const wrappedHandlers = []
@@ -102,7 +103,9 @@ class FastifyInstrumentation extends InstrumentationBase {
                     [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.ROUTE,
                     [ATTR_HTTP_ROUTE]: routeOptions.url,
                     [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                      handler.name ?? ANONYMOUS_FUNCTION_NAME
+                      handler.name?.length > 0
+                        ? handler.name
+                        : ANONYMOUS_FUNCTION_NAME
                   })
                 )
               }
@@ -123,9 +126,15 @@ class FastifyInstrumentation extends InstrumentationBase {
 
         // We always want to add the onError hook to the route to be executed last
         if (routeOptions.onError != null) {
-          routeOptions.onError = Array.isArray(routeOptions.onError)
-            ? [...routeOptions.onError, onErrorHook]
-            : [routeOptions.onError, onErrorHook]
+          routeOptions.onError = onErrorHookWrapper(routeOptions.onError, {
+            [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - onError`,
+            [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
+            [ATTR_HTTP_ROUTE]: routeOptions.url,
+            [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
+              routeOptions.onError.name?.length > 0
+                ? routeOptions.onError.name
+                : ANONYMOUS_FUNCTION_NAME
+          })
         } else {
           routeOptions.onError = onErrorHook
         }
@@ -214,6 +223,7 @@ class FastifyInstrumentation extends InstrumentationBase {
       }
 
       function onErrorHook (request, reply, error, hookDone) {
+        /** @type {Span} */
         const span = request[kRequestSpans]
 
         if (span != null) {
@@ -222,12 +232,56 @@ class FastifyInstrumentation extends InstrumentationBase {
             message: error.message
           })
           span.recordException(error)
-          span.end()
         }
 
-        request[kRequestSpans] = null
-
         hookDone()
+      }
+
+      // TODO: replace and test out
+      function onErrorHookWrapper (hook, attr) {
+        const wrapped = handlerWrapper(hook, attr)
+
+        return function onErrorHookWrapped (request, reply, error, hookDone) {
+          /** @type {Span} */
+          const span = request[kRequestSpans]
+
+          if (span == null) {
+            return wrapped.call(this, request, reply, error, hookDone)
+          }
+
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error.message
+          })
+          span.recordException(error)
+
+          try {
+            if (hook.length === 4) {
+              const wrappedDone = () => {
+                hookDone()
+              }
+
+              wrapped.call(this, request, reply, error, wrappedDone)
+              return
+            }
+
+            wrapped.call(this, request, reply, error).then(
+              () => {
+                span.end()
+                hookDone()
+              },
+              () => {
+                span.end()
+                hookDone()
+              }
+            )
+          } catch (err) {
+            span.recordException(err)
+            span.end()
+          }
+
+          request[kRequestSpans] = null
+        }
       }
 
       function addHookPatched (name, hook) {
@@ -332,7 +386,6 @@ class FastifyInstrumentation extends InstrumentationBase {
                 }
 
                 span.end()
-                return res
               } catch (error) {
                 span.setStatus({
                   code: SpanStatusCode.ERROR,
