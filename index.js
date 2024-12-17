@@ -27,7 +27,8 @@ const FASTIFY_HOOKS = [
   'preHandler',
   'preSerialization',
   'onSend',
-  'onResponse'
+  'onResponse',
+  'onError'
 ]
 const ATTRIBUTE_NAMES = {
   HOOK_NAME: 'hook.name',
@@ -126,15 +127,9 @@ class FastifyInstrumentation extends InstrumentationBase {
 
         // We always want to add the onError hook to the route to be executed last
         if (routeOptions.onError != null) {
-          routeOptions.onError = onErrorHookWrapper(routeOptions.onError, {
-            [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - onError`,
-            [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
-            [ATTR_HTTP_ROUTE]: routeOptions.url,
-            [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-              routeOptions.onError.name?.length > 0
-                ? routeOptions.onError.name
-                : ANONYMOUS_FUNCTION_NAME
-          })
+          routeOptions.onError = Array.isArray(routeOptions.onError)
+            ? [...routeOptions.onError, onErrorHook]
+            : [routeOptions.onError, onErrorHook]
         } else {
           routeOptions.onError = onErrorHook
         }
@@ -237,53 +232,6 @@ class FastifyInstrumentation extends InstrumentationBase {
         hookDone()
       }
 
-      // TODO: replace and test out
-      function onErrorHookWrapper (hook, attr) {
-        const wrapped = handlerWrapper(hook, attr)
-
-        return function onErrorHookWrapped (request, reply, error, hookDone) {
-          /** @type {Span} */
-          const span = request[kRequestSpans]
-
-          if (span == null) {
-            return wrapped.call(this, request, reply, error, hookDone)
-          }
-
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: error.message
-          })
-          span.recordException(error)
-
-          try {
-            if (hook.length === 4) {
-              const wrappedDone = () => {
-                hookDone()
-              }
-
-              wrapped.call(this, request, reply, error, wrappedDone)
-              return
-            }
-
-            wrapped.call(this, request, reply, error).then(
-              () => {
-                span.end()
-                hookDone()
-              },
-              () => {
-                span.end()
-                hookDone()
-              }
-            )
-          } catch (err) {
-            span.recordException(err)
-            span.end()
-          }
-
-          request[kRequestSpans] = null
-        }
-      }
-
       function addHookPatched (name, hook) {
         if (FASTIFY_HOOKS.includes(name)) {
           addHookOriginal(
@@ -292,7 +240,7 @@ class FastifyInstrumentation extends InstrumentationBase {
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - ${name}`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hook.name ?? ANONYMOUS_FUNCTION_NAME
+                hook.name?.length > 0 ? hook.name : ANONYMOUS_FUNCTION_NAME
             })
           )
         } else {
@@ -386,6 +334,7 @@ class FastifyInstrumentation extends InstrumentationBase {
                 }
 
                 span.end()
+                return res
               } catch (error) {
                 span.setStatus({
                   code: SpanStatusCode.ERROR,
@@ -393,6 +342,7 @@ class FastifyInstrumentation extends InstrumentationBase {
                 })
                 span.recordException(error)
                 span.end()
+                throw error
               }
             },
             this
