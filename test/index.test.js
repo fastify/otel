@@ -18,14 +18,10 @@ const {
   ReadableSpan,
   SimpleSpanProcessor
 } = require('@opentelemetry/sdk-trace-base')
-const { Span, context, SpanStatusCode } = require('@opentelemetry/api')
-const {
-  getPackageVersion,
-  runTestFixture,
-  TestCollector
-} = require('@opentelemetry/contrib-test-utils')
+const { context, SpanStatusCode } = require('@opentelemetry/api')
+
 const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http')
-const semver = require('semver')
+
 const Fastify = require('fastify')
 
 const FastifyInstrumentation = require('..')
@@ -674,10 +670,6 @@ describe('FastifyInstrumentation', () => {
       app.get(
         '/',
         {
-          // onError: function decorated (request, reply, error, done) {
-          //   console.log('error', error)
-          //   done(error)
-          // },
           errorHandler: function errorHandler (error, request, reply) {
             throw error
           }
@@ -733,7 +725,6 @@ describe('FastifyInstrumentation', () => {
       app.get(
         '/',
         {
-          // TODO: Test better; this should support an array of hooks
           onError: function decorated (_request, _reply, _error, done) {
             done()
           },
@@ -798,7 +789,6 @@ describe('FastifyInstrumentation', () => {
       app.get(
         '/',
         {
-          // TODO: Test better; this should support an array of hooks
           onError: [
             function decorated (_request, _reply, _error, done) {
               done()
