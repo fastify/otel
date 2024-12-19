@@ -45,12 +45,12 @@ const ANONYMOUS_FUNCTION_NAME = 'anonymous'
 
 // Symbols
 const kInstrumentation = Symbol('fastify instrumentation instance')
-const kRequestSpans = Symbol('fastify instrumentation request spans')
+const kRequestSpan = Symbol('fastify instrumentation request spans')
 const kRequestContext = Symbol('fastify instrumentation request context')
 
-class FastifyInstrumentation extends InstrumentationBase {
-  static FastifyInstrumentation = FastifyInstrumentation
-  static default = FastifyInstrumentation
+class FastifyOtelInstrumentation extends InstrumentationBase {
+  static FastifyOtelInstrumentation = FastifyOtelInstrumentation
+  static default = FastifyOtelInstrumentation
 
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
@@ -76,7 +76,7 @@ class FastifyInstrumentation extends InstrumentationBase {
         instance.setNotFoundHandler.bind(instance)
 
       instance.decorate(kInstrumentation, instrumentation)
-      instance.decorateRequest(kRequestSpans, null)
+      instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
 
       instance.addHook('onRoute', function (routeOptions) {
@@ -166,7 +166,7 @@ class FastifyInstrumentation extends InstrumentationBase {
           })
 
           request[kRequestContext] = trace.setSpan(context.active(), span)
-          request[kRequestSpans] = span
+          request[kRequestSpan] = span
         }
 
         hookDone()
@@ -174,7 +174,7 @@ class FastifyInstrumentation extends InstrumentationBase {
 
       // onResponse is the last hook to be executed, only added for 404 handlers
       instance.addHook('onResponse', function (request, reply, hookDone) {
-        const span = request[kRequestSpans]
+        const span = request[kRequestSpan]
 
         if (span != null) {
           span.setStatus({
@@ -187,7 +187,7 @@ class FastifyInstrumentation extends InstrumentationBase {
           span.end()
         }
 
-        request[kRequestSpans] = null
+        request[kRequestSpan] = null
 
         hookDone()
       })
@@ -199,7 +199,7 @@ class FastifyInstrumentation extends InstrumentationBase {
 
       function onSendHook (request, reply, payload, hookDone) {
         /** @type {import('@opentelemetry/api').Span} */
-        const span = request[kRequestSpans]
+        const span = request[kRequestSpan]
 
         if (span != null) {
           span.setStatus({
@@ -212,14 +212,14 @@ class FastifyInstrumentation extends InstrumentationBase {
           span.end()
         }
 
-        request[kRequestSpans] = null
+        request[kRequestSpan] = null
 
         hookDone(null, payload)
       }
 
       function onErrorHook (request, reply, error, hookDone) {
         /** @type {Span} */
-        const span = request[kRequestSpans]
+        const span = request[kRequestSpan]
 
         if (span != null) {
           span.setStatus({
@@ -288,7 +288,7 @@ class FastifyInstrumentation extends InstrumentationBase {
 
       function handlerWrapper (handler, spanAttributes = {}) {
         return function handlerWrapped (...args) {
-          /** @type {FastifyInstrumentation} */
+          /** @type {FastifyOtelInstrumentation} */
           const instrumentation = this[kInstrumentation]
           const [request] = args
 
@@ -353,4 +353,4 @@ class FastifyInstrumentation extends InstrumentationBase {
   }
 }
 
-module.exports = FastifyInstrumentation
+module.exports = FastifyOtelInstrumentation

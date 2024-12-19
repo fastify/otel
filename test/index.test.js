@@ -6,7 +6,6 @@ const {
   afterEach,
   beforeEach
 } = require('node:test')
-// const http = require('node:http')
 
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
 const {
@@ -15,7 +14,6 @@ const {
 const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
 const {
   InMemorySpanExporter,
-  ReadableSpan,
   SimpleSpanProcessor
 } = require('@opentelemetry/sdk-trace-base')
 const { context, SpanStatusCode } = require('@opentelemetry/api')
@@ -28,14 +26,14 @@ const FastifyInstrumentation = require('..')
 
 describe('Interface', () => {
   test('should exports support', t => {
-    t.assert.equal(FastifyInstrumentation.name, 'FastifyInstrumentation')
+    t.assert.equal(FastifyInstrumentation.name, 'FastifyOtelInstrumentation')
     t.assert.equal(
       FastifyInstrumentation.default.name,
-      'FastifyInstrumentation'
+      'FastifyOtelInstrumentation'
     )
     t.assert.equal(
-      FastifyInstrumentation.FastifyInstrumentation.name,
-      'FastifyInstrumentation'
+      FastifyInstrumentation.FastifyOtelInstrumentation.name,
+      'FastifyOtelInstrumentation'
     )
     t.assert.strictEqual(
       Object.getPrototypeOf(FastifyInstrumentation),
