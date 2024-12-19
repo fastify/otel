@@ -92,7 +92,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
                 [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
                   handlerLike.name?.length > 0
                     ? handlerLike.name
-                    : ANONYMOUS_FUNCTION_NAME
+                    : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
               })
             } else if (Array.isArray(handlerLike)) {
               const wrappedHandlers = []
@@ -240,7 +240,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - ${name}`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hook.name?.length > 0 ? hook.name : ANONYMOUS_FUNCTION_NAME
+              hook.name?.length > 0 ? hook.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             })
           )
         } else {
@@ -254,7 +254,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
             [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
             [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-              hooks.name ?? ANONYMOUS_FUNCTION_NAME
+              hooks.name?.length > 0 ? hooks.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
           })
           setNotFoundHandlerOriginal(handler)
         } else {
@@ -263,7 +263,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preValidation`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hooks.preValidation.name ?? ANONYMOUS_FUNCTION_NAME
+                hooks.preValidation.name?.length > 0 ? hooks.preValidation.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             })
           }
 
@@ -272,7 +272,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preHandler`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hooks.preHandler.name ?? ANONYMOUS_FUNCTION_NAME
+                hooks.preHandler.name?.length > 0 ? hooks.preHandler.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             })
           }
 
@@ -280,7 +280,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
             [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
             [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-              hooks.name ?? ANONYMOUS_FUNCTION_NAME
+              hooks.name?.length > 0 ? hooks.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
           })
           setNotFoundHandlerOriginal(hooks, handler)
         }
@@ -301,7 +301,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             `handler - ${
               handler.name?.length > 0
                 ? handler.name
-                : this.pluginName ?? ANONYMOUS_FUNCTION_NAME
+                : this.pluginName ?? ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             }`,
             {
               attributes: spanAttributes
