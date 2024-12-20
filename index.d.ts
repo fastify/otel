@@ -10,7 +10,7 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
   static FastifyInstrumentation: FastifyOtelInstrumentation
   constructor (config?: FastifyOtelInstrumentationOpts)
   init (): InstrumentationNodeModuleDefinition[]
-  plugin (instance: FastifyInstance, opts: FastifyOtelOptions, done: (err?: Error) => void): void
+  plugin (): (instance: FastifyInstance, opts: FastifyOtelOptions, done: (err?: Error) => void) => void
 }
 
 export default FastifyOtelInstrumentation

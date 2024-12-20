@@ -8,8 +8,8 @@ expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
 expectAssignable<InstrumentationConfig>({} as FastifyOtelInstrumentationOpts)
 
 const app = Fastify()
-app.register(new FastifyOtelInstrumentation().plugin)
-app.register((nested, opts, done) => {
-  nested.register(new FastifyOtelInstrumentation().plugin)
+app.register(new FastifyOtelInstrumentation().plugin())
+app.register((nested, _opts, done) => {
+  nested.register(new FastifyOtelInstrumentation().plugin())
   done()
 })
