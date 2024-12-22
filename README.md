@@ -1,13 +1,5 @@
 # @fastify/otel
 
-[![CI](https://github.com/fastify/otel/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/fastify/otel/actions/workflows/ci.yml)
-
-<!-- [![NPM version](https://img.shields.io/npm/v/@fastify/otel.svg?style=flat)](https://www.npmjs.com/package/fastify-plugin) -->
-
-[![neostandard javascript style](https://img.shields.io/badge/code_style-neostandard-brightgreen?style=flat)](https://github.com/neostandard/neostandard)
-
-`fastify-plugin` is a plugin helper for [Fastify](https://github.com/fastify/fastify).
-
 OpenTelemetry auto-instrumentation library.
 
 ## Install
@@ -18,9 +10,9 @@ npm i @fastify/otel
 
 ## Usage
 
-`@fastify/otel` works as a metric creator as well as instrumentation for you fastify application.
+`@fastify/otel` works as a metric creator as well as application performance monitor for your Fastify application.
 
-Its usage requires to be set before you start defining your routes and other plugins in order to cover up the most of your fatify server.
+It must be configured before defining routes and other plugins in order to cover the most of your Fastify server.
 
 - It automatically wraps the main request handler
 - Instruments all route hooks (defined at instance and route definition level)
@@ -74,6 +66,8 @@ app.register((instance, opts, done) => {
 >
 > - This instrumentation requires `@opentelemetry/http-instrumentation` to be able to propagate the traces all the way back to upstream
 >   - The HTTP instrumentation might cover all your routes although `@fastify/otel` just covers a subset of your application
+
+For more information about OpenTelemetry, please refer to the [OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/) documentation.
 
 ## License
 
