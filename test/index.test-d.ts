@@ -5,6 +5,7 @@ import { fastify as Fastify } from 'fastify'
 import { FastifyOtelInstrumentation, FastifyOtelInstrumentationOpts } from '..'
 
 expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
+expectAssignable<InstrumentationConfig>({ servername: 'server', enabled: true } as FastifyOtelInstrumentationOpts)
 expectAssignable<InstrumentationConfig>({} as FastifyOtelInstrumentationOpts)
 
 const app = Fastify()
