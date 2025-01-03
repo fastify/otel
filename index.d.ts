@@ -4,7 +4,9 @@ import { InstrumentationBase, InstrumentationConfig, InstrumentationNodeModuleDe
 import { FastifyInstance } from 'fastify'
 
 export interface FastifyOtelOptions {}
-export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {}
+export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
+  servername?: string
+}
 
 declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {
   static FastifyInstrumentation: FastifyOtelInstrumentation

@@ -4,12 +4,10 @@ const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
   ATTR_HTTP_ROUTE,
   ATTR_HTTP_RESPONSE_STATUS_CODE,
-  ATTR_HTTP_REQUEST_METHOD
+  ATTR_HTTP_REQUEST_METHOD,
+  ATTR_SERVICE_NAME
 } = require('@opentelemetry/semantic-conventions')
-const {
-  InstrumentationBase,
-  InstrumentationNodeModuleDefinition
-} = require('@opentelemetry/instrumentation')
+const { InstrumentationBase } = require('@opentelemetry/instrumentation')
 
 const fp = require('fastify-plugin')
 
@@ -51,15 +49,16 @@ const kRequestContext = Symbol('fastify instrumentation request context')
 class FastifyOtelInstrumentation extends InstrumentationBase {
   static FastifyOtelInstrumentation = FastifyOtelInstrumentation
   static default = FastifyOtelInstrumentation
+  servername = ''
 
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
+    this.servername = config?.servername ?? 'fastify'
   }
 
+  // We do not do patching in this instrumentation
   init () {
-    return [
-      new InstrumentationNodeModuleDefinition('fastify', [SUPPORTED_VERSIONS])
-    ]
+    return []
   }
 
   plugin () {
@@ -86,6 +85,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
             if (typeof handlerLike === 'function') {
               routeOptions[hook] = handlerWrapper(handlerLike, {
+                [ATTR_SERVICE_NAME]:
+                  instance[kInstrumentation].servername,
                 [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route -> ${hook}`,
                 [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.ROUTE,
                 [ATTR_HTTP_ROUTE]: routeOptions.url,
@@ -100,6 +101,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
               for (const handler of handlerLike) {
                 wrappedHandlers.push(
                   handlerWrapper(handler, {
+                    [ATTR_SERVICE_NAME]:
+                      instance[kInstrumentation].servername,
                     [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route -> ${hook}`,
                     [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.ROUTE,
                     [ATTR_HTTP_ROUTE]: routeOptions.url,
@@ -135,6 +138,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
 
         routeOptions.handler = handlerWrapper(routeOptions.handler, {
+          [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
           [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route-handler`,
           [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.HANDLER,
           [ATTR_HTTP_ROUTE]: routeOptions.url,
@@ -159,6 +163,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           /** @type {Span} */
           const span = this[kInstrumentation].tracer.startSpan('request', {
             attributes: {
+              [ATTR_SERVICE_NAME]:
+                instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
               [ATTR_HTTP_ROUTE]: request.url,
               [ATTR_HTTP_REQUEST_METHOD]: request.method
@@ -237,10 +243,14 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           addHookOriginal(
             name,
             handlerWrapper(hook, {
+              [ATTR_SERVICE_NAME]:
+                instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - ${name}`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-              hook.name?.length > 0 ? hook.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+                hook.name?.length > 0
+                  ? hook.name
+                  : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             })
           )
         } else {
@@ -251,36 +261,50 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       function setNotFoundHandlerPatched (hooks, handler) {
         if (typeof hooks === 'function') {
           handler = handlerWrapper(hooks, {
+            [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
             [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
             [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
             [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-              hooks.name?.length > 0 ? hooks.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+              hooks.name?.length > 0
+                ? hooks.name
+                : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
           })
           setNotFoundHandlerOriginal(handler)
         } else {
           if (hooks.preValidation != null) {
             hooks.preValidation = handlerWrapper(hooks.preValidation, {
+              [ATTR_SERVICE_NAME]:
+                instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preValidation`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hooks.preValidation.name?.length > 0 ? hooks.preValidation.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+                hooks.preValidation.name?.length > 0
+                  ? hooks.preValidation.name
+                  : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             })
           }
 
           if (hooks.preHandler != null) {
             hooks.preHandler = handlerWrapper(hooks.preHandler, {
+              [ATTR_SERVICE_NAME]:
+                instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preHandler`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hooks.preHandler.name?.length > 0 ? hooks.preHandler.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+                hooks.preHandler.name?.length > 0
+                  ? hooks.preHandler.name
+                  : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             })
           }
 
           handler = handlerWrapper(handler, {
+            [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
             [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
             [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
             [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-              hooks.name?.length > 0 ? hooks.name : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+              hooks.name?.length > 0
+                ? hooks.name
+                : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
           })
           setNotFoundHandlerOriginal(hooks, handler)
         }
@@ -301,7 +325,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             `handler - ${
               handler.name?.length > 0
                 ? handler.name
-                : this.pluginName ?? ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+                : this.pluginName ??
+                  ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
             }`,
             {
               attributes: spanAttributes
