@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@opentelemetry/core": "^1.29.0",
-    "@opentelemetry/instrumentation": "^0.56.0",
+    "@opentelemetry/instrumentation": "^0.57.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "fastify-plugin": "^5.0.1"
   },
