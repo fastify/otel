@@ -31,6 +31,16 @@
     "url": "https://github.com/fastify/otel/issues"
   },
   "homepage": "https://github.com/fastify/otel#readme",
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/fastify"
+    },
+    {
+      "type": "opencollective",
+      "url": "https://opencollective.com/fastify"
+    }
+  ],
   "devDependencies": {
     "@fastify/pre-commit": "^2.1.0",
     "@fastify/type-provider-typebox": "^5.0.0-pre.fv5.1",
