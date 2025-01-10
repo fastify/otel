@@ -35,7 +35,7 @@
     "@fastify/pre-commit": "^2.1.0",
     "@fastify/type-provider-typebox": "^5.0.0-pre.fv5.1",
     "@opentelemetry/context-async-hooks": "^1.29.0",
-    "@opentelemetry/contrib-test-utils": "^0.44.0",
+    "@opentelemetry/contrib-test-utils": "^0.45.0",
     "@opentelemetry/instrumentation-http": "^0.57.0",
     "@opentelemetry/sdk-trace-base": "^1.29.0",
     "@opentelemetry/sdk-trace-node": "^1.29.0",
