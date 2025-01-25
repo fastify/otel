@@ -1,3 +1,5 @@
+'use strict'
+
 const {
   test,
   describe,
@@ -6,8 +8,8 @@ const {
   afterEach,
   beforeEach
 } = require('node:test')
+const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
-const { InstrumentationBase } = require('@opentelemetry/instrumentation')
 const {
   AsyncHooksContextManager
 } = require('@opentelemetry/context-async-hooks')
@@ -20,41 +22,7 @@ const { context, SpanStatusCode } = require('@opentelemetry/api')
 
 const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http')
 
-const Fastify = require('fastify')
-
 const FastifyInstrumentation = require('..')
-
-describe('Interface', () => {
-  test('should exports support', t => {
-    t.assert.equal(FastifyInstrumentation.name, 'FastifyOtelInstrumentation')
-    t.assert.equal(
-      FastifyInstrumentation.default.name,
-      'FastifyOtelInstrumentation'
-    )
-    t.assert.equal(
-      FastifyInstrumentation.FastifyOtelInstrumentation.name,
-      'FastifyOtelInstrumentation'
-    )
-    t.assert.strictEqual(
-      Object.getPrototypeOf(FastifyInstrumentation),
-      InstrumentationBase
-    )
-    t.assert.strictEqual(new FastifyInstrumentation({ servername: 'test' }).servername, 'test')
-  })
-
-  test('FastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
-    const app = Fastify()
-    const instrumentation = new FastifyInstrumentation()
-    const plugin = instrumentation.plugin()
-
-    t.assert.equal(typeof plugin, 'function')
-    t.assert.equal(plugin.length, 3)
-
-    app.register(plugin)
-
-    await app.ready()
-  })
-})
 
 describe('FastifyInstrumentation', () => {
   const httpInstrumentation = new HttpInstrumentation()

@@ -15,7 +15,7 @@ const {
 } = require('./package.json')
 
 // Constants
-const SUPPORTED_VERSIONS = '>=5.0.0 <6'
+const SUPPORTED_VERSIONS = '>=4.0.0 <6'
 const FASTIFY_HOOKS = [
   'onRequest',
   'preParsing',

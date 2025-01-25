@@ -8,8 +8,11 @@
   "scripts": {
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "npm run test:unit && npm run test:typescript",
+    "test": "npm run test:all && npm run test:typescript",
     "test:unit": "c8 --100 node --test",
+    "test:all": "npm run test:v4 && npm run test:v5",
+    "test:v4": "FASTIFY_VERSION=fastifyv4 npm run test:unit",
+    "test:v5": "FASTIFY_VERSION=fastify npm run test:unit",
     "test:coverage": "c8 node --test && c8 report --reporter=html",
     "test:typescript": "tsd"
   },
@@ -53,6 +56,7 @@
     "c8": "^10.1.2",
     "eslint": "^9.16.0",
     "fastify": "^5.1.0",
+    "fastifyv4": "npm:fastify@^4.0.0",
     "neostandard": "^0.12.0",
     "tsd": "^0.31.0"
   },
