@@ -8,6 +8,7 @@ const {
   afterEach,
   beforeEach
 } = require('node:test')
+const assert = require('node:assert')
 const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
 const {
@@ -60,8 +61,6 @@ describe('FastifyInstrumentation', () => {
 
       instrumentation.disable()
 
-      t.plan(3)
-
       const response = await app.inject({
         method: 'GET',
         url: '/'
@@ -71,9 +70,9 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .find(span => span.instrumentationLibrary.name === '@fastify/otel')
 
-      t.assert.ok(spans == null)
-      t.assert.equal(response.statusCode, 200)
-      t.assert.equal(response.body, 'hello world')
+      assert.ok(spans == null)
+      assert.equal(response.statusCode, 200)
+      assert.equal(response.body, 'hello world')
     })
   })
 
@@ -114,24 +113,23 @@ describe('FastifyInstrumentation', () => {
 
       const [end, start] = spans
 
-      t.plan(5)
-      t.assert.equal(spans.length, 2)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'service.name': 'fastify',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'service.name': 'fastify',
         'hook.callback.name': 'anonymous'
       })
-      t.assert.equal(response.status, 200)
-      t.assert.equal(await response.text(), 'hello world')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
     })
 
     test('should create named span (simple case)', async t => {
@@ -158,25 +156,24 @@ describe('FastifyInstrumentation', () => {
 
       const [end, start] = spans
 
-      t.plan(6)
-      t.assert.equal(spans.length, 2)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'service.name': 'fastify',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'service.name': 'fastify',
         'hook.callback.name': 'helloworld'
       })
-      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 200)
-      t.assert.equal(await response.text(), 'hello world')
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
     })
 
     test('should create span for different hooks', async t => {
@@ -219,53 +216,52 @@ describe('FastifyInstrumentation', () => {
 
       const [preHandler, onReq2, onReq1, end, start] = spans
 
-      t.plan(10)
-      t.assert.equal(spans.length, 5)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 5)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'service.name': 'fastify',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'service.name': 'fastify',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
-      t.assert.deepStrictEqual(onReq1.attributes, {
+      assert.deepStrictEqual(onReq1.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'onRequest1',
         'hook.name': 'fastify -> @fastify/otel - route -> onRequest',
         'http.route': '/',
         'service.name': 'fastify',
       })
-      t.assert.deepStrictEqual(onReq2.attributes, {
+      assert.deepStrictEqual(onReq2.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'anonymous',
         'hook.name': 'fastify -> @fastify/otel - route -> onRequest',
         'http.route': '/',
         'service.name': 'fastify',
       })
-      t.assert.deepStrictEqual(preHandler.attributes, {
+      assert.deepStrictEqual(preHandler.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'preHandler',
         'hook.name': 'fastify -> @fastify/otel - route -> preHandler',
         'http.route': '/',
         'service.name': 'fastify',
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'hook.callback.name': 'helloworld',
         'service.name': 'fastify',
       })
-      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 200)
-      t.assert.equal(await response.text(), 'hello world')
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
     })
 
     test('should create span for different hooks (patched)', async t => {
@@ -309,45 +305,44 @@ describe('FastifyInstrumentation', () => {
 
       const [preValidation, end, start, onReq1] = spans
 
-      t.plan(9)
-      t.assert.equal(spans.length, 4)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 4)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'GET',
         'service.name': 'fastify',
         'http.response.status_code': 200
       })
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'GET',
         'service.name': 'fastify',
         'http.response.status_code': 200
       })
-      t.assert.deepStrictEqual(onReq1.attributes, {
+      assert.deepStrictEqual(onReq1.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'onSend',
         'hook.name': 'fastify -> @fastify/otel - route -> onSend',
         'service.name': 'fastify',
         'http.route': '/'
       })
-      t.assert.deepStrictEqual(preValidation.attributes, {
+      assert.deepStrictEqual(preValidation.attributes, {
         'fastify.type': 'hook',
         'hook.callback.name': 'preValidation',
         'service.name': 'fastify',
         'hook.name': 'fastify -> @fastify/otel - preValidation'
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'service.name': 'fastify',
         'hook.callback.name': 'helloworld'
       })
-      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 200)
-      t.assert.equal(await response.text(), 'hello world')
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
     })
 
     test('should create span for different hooks (error scenario)', async t => {
@@ -378,24 +373,23 @@ describe('FastifyInstrumentation', () => {
 
       const [preHandler, start] = spans
 
-      t.plan(6)
-      t.assert.equal(spans.length, 2)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'GET',
         'service.name': 'fastify',
         'http.response.status_code': 500
       })
-      t.assert.deepStrictEqual(preHandler.attributes, {
+      assert.deepStrictEqual(preHandler.attributes, {
         'fastify.type': 'hook',
         'hook.callback.name': 'anonymous',
         'service.name': 'fastify',
         'hook.name': 'fastify -> @fastify/otel - preHandler'
       })
-      t.assert.equal(preHandler.status.code, SpanStatusCode.ERROR)
-      t.assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 500)
+      assert.equal(preHandler.status.code, SpanStatusCode.ERROR)
+      assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 500)
     })
 
     test('should create named span (404)', async t => {
@@ -423,10 +417,9 @@ describe('FastifyInstrumentation', () => {
 
       const [start] = spans
 
-      t.plan(3)
-      t.assert.equal(response.status, 404)
-      t.assert.equal(spans.length, 1)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(response.status, 404)
+      assert.equal(spans.length, 1)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'POST',
@@ -464,17 +457,16 @@ describe('FastifyInstrumentation', () => {
 
       const [start, fof] = spans
 
-      t.plan(4)
-      t.assert.equal(response.status, 404)
-      t.assert.equal(spans.length, 2)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(response.status, 404)
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'POST',
         'service.name': 'fastify',
         'http.response.status_code': 404
       })
-      t.assert.deepStrictEqual(fof.attributes, {
+      assert.deepStrictEqual(fof.attributes, {
         'hook.name': 'fastify -> @fastify/otel - not-found-handler',
         'fastify.type': 'hook',
         'service.name': 'fastify',
@@ -534,39 +526,38 @@ describe('FastifyInstrumentation', () => {
 
       const [preHandler, preValidation, start, fof] = spans
 
-      t.plan(9)
-      t.assert.equal(response.status, 404)
-      t.assert.equal(spans.length, 4)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(response.status, 404)
+      assert.equal(spans.length, 4)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'POST',
         'service.name': 'fastify',
         'http.response.status_code': 404
       })
-      t.assert.deepStrictEqual(preHandler.attributes, {
+      assert.deepStrictEqual(preHandler.attributes, {
         'hook.name':
           'fastify -> @fastify/otel - not-found-handler - preHandler',
         'fastify.type': 'hook',
         'service.name': 'fastify',
         'hook.callback.name': 'preHandler'
       })
-      t.assert.deepStrictEqual(preValidation.attributes, {
+      assert.deepStrictEqual(preValidation.attributes, {
         'hook.name':
           'fastify -> @fastify/otel - not-found-handler - preValidation',
         'fastify.type': 'hook',
         'service.name': 'fastify',
         'hook.callback.name': 'preValidation'
       })
-      t.assert.deepStrictEqual(fof.attributes, {
+      assert.deepStrictEqual(fof.attributes, {
         'hook.name': 'fastify -> @fastify/otel - not-found-handler',
         'fastify.type': 'hook',
         'service.name': 'fastify',
         'hook.callback.name': 'notFoundHandler'
       })
-      t.assert.equal(fof.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+      assert.equal(fof.parentSpanId, start.spanContext().spanId)
+      assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
+      assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
     })
 
     test('should create named span (404 - customized with hooks)', async t => {
@@ -621,39 +612,38 @@ describe('FastifyInstrumentation', () => {
 
       const [preHandler, preValidation, start, fof] = spans
 
-      t.plan(9)
-      t.assert.equal(response.status, 404)
-      t.assert.equal(spans.length, 4)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(response.status, 404)
+      assert.equal(spans.length, 4)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'POST',
         'service.name': 'fastify',
         'http.response.status_code': 404
       })
-      t.assert.deepStrictEqual(preHandler.attributes, {
+      assert.deepStrictEqual(preHandler.attributes, {
         'hook.name':
           'fastify -> @fastify/otel - not-found-handler - preHandler',
         'fastify.type': 'hook',
         'service.name': 'fastify',
         'hook.callback.name': 'preHandler'
       })
-      t.assert.deepStrictEqual(preValidation.attributes, {
+      assert.deepStrictEqual(preValidation.attributes, {
         'hook.name':
           'fastify -> @fastify/otel - not-found-handler - preValidation',
         'fastify.type': 'hook',
         'service.name': 'fastify',
         'hook.callback.name': 'preValidation'
       })
-      t.assert.deepStrictEqual(fof.attributes, {
+      assert.deepStrictEqual(fof.attributes, {
         'hook.name': 'fastify -> @fastify/otel - not-found-handler',
         'fastify.type': 'hook',
         'service.name': 'fastify',
         'hook.callback.name': 'notFoundHandler'
       })
-      t.assert.equal(fof.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+      assert.equal(fof.parentSpanId, start.spanContext().spanId)
+      assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
+      assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
     })
 
     test('should end spans upon error', async t => {
@@ -688,25 +678,24 @@ describe('FastifyInstrumentation', () => {
 
       const [end, start] = spans
 
-      t.plan(6)
-      t.assert.equal(spans.length, 2)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'GET',
         'service.name': 'fastify',
         'http.response.status_code': 500
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'service.name': 'fastify',
         'hook.callback.name': 'helloworld'
       })
-      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 500)
-      t.assert.deepStrictEqual(await response.json(), {
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 500)
+      assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
         error: 'Internal Server Error',
         message: 'error'
@@ -748,32 +737,31 @@ describe('FastifyInstrumentation', () => {
 
       const [end, start, error] = spans
 
-      t.plan(7)
-      t.assert.equal(spans.length, 3)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 3)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'GET',
         'service.name': 'fastify',
         'http.response.status_code': 500
       })
-      t.assert.deepStrictEqual(error.attributes, {
+      assert.deepStrictEqual(error.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'decorated',
         'hook.name': 'fastify -> @fastify/otel - route -> onError',
         'http.route': '/',
         'service.name': 'fastify',
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'service.name': 'fastify',
         'hook.callback.name': 'helloworld'
       })
-      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 500)
-      t.assert.deepStrictEqual(await response.json(), {
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 500)
+      assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
         error: 'Internal Server Error',
         message: 'error'
@@ -820,39 +808,38 @@ describe('FastifyInstrumentation', () => {
 
       const [end, start, error2, error] = spans
 
-      t.plan(8)
-      t.assert.equal(spans.length, 4)
-      t.assert.deepStrictEqual(start.attributes, {
+      assert.equal(spans.length, 4)
+      assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
         'http.request.method': 'GET',
         'service.name': 'fastify',
         'http.response.status_code': 500
       })
-      t.assert.deepStrictEqual(error.attributes, {
+      assert.deepStrictEqual(error.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'decorated',
         'hook.name': 'fastify -> @fastify/otel - route -> onError',
         'service.name': 'fastify',
         'http.route': '/'
       })
-      t.assert.deepStrictEqual(error2.attributes, {
+      assert.deepStrictEqual(error2.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'decorated2',
         'hook.name': 'fastify -> @fastify/otel - route -> onError',
         'service.name': 'fastify',
         'http.route': '/'
       })
-      t.assert.deepStrictEqual(end.attributes, {
+      assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
         'service.name': 'fastify',
         'hook.callback.name': 'helloworld'
       })
-      t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-      t.assert.equal(response.status, 500)
-      t.assert.deepStrictEqual(await response.json(), {
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 500)
+      assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
         error: 'Internal Server Error',
         message: 'error'
@@ -887,8 +874,6 @@ describe('FastifyInstrumentation', () => {
 
         instrumentation.disable()
 
-        t.plan(3)
-
         const response = await app.inject({
           method: 'GET',
           url: '/'
@@ -898,9 +883,9 @@ describe('FastifyInstrumentation', () => {
           .getFinishedSpans()
           .find(span => span.instrumentationLibrary.name === '@fastify/otel')
 
-        t.assert.ok(spans == null)
-        t.assert.equal(response.statusCode, 200)
-        t.assert.equal(response.body, 'hello world')
+        assert.ok(spans == null)
+        assert.equal(response.statusCode, 200)
+        assert.equal(response.body, 'hello world')
       })
     })
 
@@ -944,24 +929,23 @@ describe('FastifyInstrumentation', () => {
 
         const [end, start] = spans
 
-        t.plan(5)
-        t.assert.equal(spans.length, 2)
-        t.assert.deepStrictEqual(start.attributes, {
+        assert.equal(spans.length, 2)
+        assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
           'http.request.method': 'GET',
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
-        t.assert.deepStrictEqual(end.attributes, {
+        assert.deepStrictEqual(end.attributes, {
           'hook.name': 'plugin - route-handler',
           'fastify.type': 'request-handler',
           'service.name': 'fastify',
           'http.route': '/',
           'hook.callback.name': 'anonymous'
         })
-        t.assert.equal(response.status, 200)
-        t.assert.equal(await response.text(), 'hello world')
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'hello world')
       })
 
       test('should create named span (simple case)', async t => {
@@ -990,25 +974,24 @@ describe('FastifyInstrumentation', () => {
 
         const [end, start] = spans
 
-        t.plan(6)
-        t.assert.equal(spans.length, 2)
-        t.assert.deepStrictEqual(start.attributes, {
+        assert.equal(spans.length, 2)
+        assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
           'http.request.method': 'GET',
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
-        t.assert.deepStrictEqual(end.attributes, {
+        assert.deepStrictEqual(end.attributes, {
           'hook.name': 'nested -> @fastify/otel - route-handler',
           'fastify.type': 'request-handler',
           'http.route': '/',
           'service.name': 'fastify',
           'hook.callback.name': 'helloworld'
         })
-        t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-        t.assert.equal(response.status, 200)
-        t.assert.equal(await response.text(), 'hello world')
+        assert.equal(end.parentSpanId, start.spanContext().spanId)
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'hello world')
       })
 
       test('should create span for different hooks (patched)', async t => {
@@ -1056,45 +1039,44 @@ describe('FastifyInstrumentation', () => {
 
         const [preValidation, end, start, onReq1] = spans
 
-        t.plan(9)
-        t.assert.equal(spans.length, 4)
-        t.assert.deepStrictEqual(start.attributes, {
+        assert.equal(spans.length, 4)
+        assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
           'http.request.method': 'GET',
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
-        t.assert.deepStrictEqual(start.attributes, {
+        assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
           'http.request.method': 'GET',
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
-        t.assert.deepStrictEqual(onReq1.attributes, {
+        assert.deepStrictEqual(onReq1.attributes, {
           'fastify.type': 'route-hook',
           'hook.callback.name': 'onSend',
           'hook.name': 'nested - route -> onSend',
           'service.name': 'fastify',
           'http.route': '/'
         })
-        t.assert.deepStrictEqual(preValidation.attributes, {
+        assert.deepStrictEqual(preValidation.attributes, {
           'fastify.type': 'hook',
           'hook.callback.name': 'anonymous',
           'service.name': 'fastify',
           'hook.name': 'fastify -> @fastify/otel - preValidation'
         })
-        t.assert.deepStrictEqual(end.attributes, {
+        assert.deepStrictEqual(end.attributes, {
           'hook.name': 'nested - route-handler',
           'fastify.type': 'request-handler',
           'http.route': '/',
           'service.name': 'fastify',
           'hook.callback.name': 'helloworld'
         })
-        t.assert.equal(end.parentSpanId, start.spanContext().spanId)
-        t.assert.equal(response.status, 200)
-        t.assert.equal(await response.text(), 'hello world')
+        assert.equal(end.parentSpanId, start.spanContext().spanId)
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'hello world')
       })
 
       test('should respect context (error scenario)', async t => {
@@ -1128,16 +1110,15 @@ describe('FastifyInstrumentation', () => {
 
         const [start] = spans
 
-        t.plan(3)
-        t.assert.equal(spans.length, 1)
-        t.assert.deepStrictEqual(start.attributes, {
+        assert.equal(spans.length, 1)
+        assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
           'http.request.method': 'GET',
           'service.name': 'fastify',
           'http.response.status_code': 500
         })
-        t.assert.equal(response.status, 500)
+        assert.equal(response.status, 500)
       })
     })
   })
