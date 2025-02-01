@@ -51,7 +51,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
-    this.servername = config?.servername ?? 'fastify'
+    this.servername = config?.servername ?? process.env.OTEL_SERVICE_NAME ?? 'fastify'
   }
 
   // We do not do patching in this instrumentation

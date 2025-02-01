@@ -1123,3 +1123,79 @@ describe('FastifyInstrumentation', () => {
     })
   })
 })
+
+// OTEL_SERVICE_NAME
+// https://opentelemetry.io/docs/languages/sdk-configuration/general/
+describe('FastifyInstrumentation with General SDK Configuration set', () => {
+  process.env.OTEL_SERVICE_NAME = 'my_app';
+
+  const httpInstrumentation = new HttpInstrumentation()
+  const instrumentation = new FastifyInstrumentation()
+  const contextManager = new AsyncHooksContextManager()
+  const memoryExporter = new InMemorySpanExporter()
+  const provider = new NodeTracerProvider()
+  const spanProcessor = new SimpleSpanProcessor(memoryExporter)
+
+  provider.addSpanProcessor(spanProcessor)
+  context.setGlobalContextManager(contextManager)
+  httpInstrumentation.setTracerProvider(provider)
+  instrumentation.setTracerProvider(provider)
+
+  describe('Instrumentation#enabled', () => {
+    beforeEach(() => {
+      instrumentation.enable()
+      httpInstrumentation.enable()
+      contextManager.enable()
+    })
+
+    afterEach(() => {
+      contextManager.disable()
+      instrumentation.disable()
+      httpInstrumentation.disable()
+      spanProcessor.forceFlush()
+      memoryExporter.reset()
+    })
+
+    test('should create span with service.name equal to general sdk configuration', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async (request, reply) => 'hello world')
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [end, start] = spans
+
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'service.name': 'my_app',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+      assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'service.name': 'my_app',
+        'hook.callback.name': 'anonymous'
+      })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+  })
+})
