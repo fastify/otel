@@ -38,8 +38,8 @@ const FastifyOtelInstrumentation = require('@fastify/otel');
 
 // If serverName is not provided, it will fallback to OTEL_SERVICE_NAME
 // as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ serverName: '<yourCustomApplicationName>' }); 
-fastifyOtelInstrumentation.setTraceProvider(provider)
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ servername: '<yourCustomApplicationName>' }); 
+fastifyOtelInstrumentation.setTracerProvider(provider)
 
 module.exports = { fastifyOtelInstrumentation }
 
