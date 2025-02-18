@@ -68,6 +68,19 @@ app.register((instance, opts, done) => {
 }, { prefix: '/nested' })
 ```
 
+### Automatic plugin registration
+
+The plugin can be automatically registered with `registerOnInitialization` option set to `true`.
+In this case, it is necessary to await fastify instance.
+```js
+// ... in your OTEL setup
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ registerOnInitialization: true });
+
+// ... in your Fastify definition
+const Fastify = require('fastify');
+const app = await fastify();
+```
+
 > **Notes**:
 >
 > - This instrumentation requires `@opentelemetry/http-instrumentation` to be able to propagate the traces all the way back to upstream

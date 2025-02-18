@@ -91,6 +91,27 @@ describe('FastifyInstrumentation', () => {
       memoryExporter.reset()
     })
 
+    test('should attach plugin if registerOnInitialization is true', async () => {
+      const instrumentation = new FastifyInstrumentation({ registerOnInitialization: true })
+      assert.notEqual(instrumentation._handleInitialization, undefined)
+
+      const app = await Fastify()
+      assert.ok(app.hasPlugin('@fastify/otel'))
+      app.close()
+
+      instrumentation.disable()
+      assert.equal(instrumentation._handleInitialization, undefined)
+    })
+
+    test('shouldn\'t attach plugin if registerOnInitialization isn\'t set', async () => {
+      const instrumentation = new FastifyInstrumentation()
+      assert.equal(instrumentation._handleInitialization, undefined)
+
+      const app = await Fastify()
+      assert.equal(app.hasPlugin('@fastify/otel'), false)
+      app.close()
+    })
+
     test('should create anonymous span (simple case)', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()

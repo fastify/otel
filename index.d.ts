@@ -6,6 +6,7 @@ import { FastifyInstance } from 'fastify'
 export interface FastifyOtelOptions {}
 export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
   servername?: string
+  registerOnInitialization?: boolean
 }
 
 declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {

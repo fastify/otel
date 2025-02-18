@@ -1,4 +1,5 @@
 'use strict'
+const dc = require('node:diagnostics_channel')
 const { context, trace, SpanStatusCode } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
@@ -54,6 +55,25 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
     this.servername = config?.servername ?? process.env.OTEL_SERVICE_NAME ?? 'fastify'
+  }
+
+  enable () {
+    if (this._handleInitialization === undefined && this.getConfig().registerOnInitialization) {
+      const FastifyInstrumentationPlugin = this.plugin()
+      this._handleInitialization = (message) => {
+        message.fastify.register(FastifyInstrumentationPlugin)
+      }
+      dc.subscribe('fastify.initialization', this._handleInitialization)
+    }
+    return super.enable()
+  }
+
+  disable () {
+    if (this._handleInitialization) {
+      dc.unsubscribe('fastify.initialization', this._handleInitialization)
+      this._handleInitialization = undefined
+    }
+    return super.disable()
   }
 
   // We do not do patching in this instrumentation
