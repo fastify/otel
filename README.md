@@ -70,7 +70,7 @@ app.register((instance, opts, done) => {
 
 > **Notes**:
 >
-> - This instrumentation requires `@opentelemetry/http-instrumentation` to be able to propagate the traces all the way back to upstream
+> - This instrumentation requires `@opentelemetry/instrumentation-http` to be able to propagate the traces all the way back to upstream
 >   - The HTTP instrumentation might cover all your routes although `@fastify/otel` just covers a subset of your application
 
 For more information about OpenTelemetry, please refer to the [OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/) documentation.
