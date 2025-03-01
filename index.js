@@ -269,7 +269,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         const addHookOriginal = this[kAddHookOriginal]
 
         if (FASTIFY_HOOKS.includes(name)) {
-          addHookOriginal.call(
+          return addHookOriginal.call(
             this,
             name,
             handlerWrapper(hook, {
@@ -283,7 +283,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             })
           )
         } else {
-          addHookOriginal.call(this, name, hook)
+          return addHookOriginal.call(this, name, hook)
         }
       }
 
