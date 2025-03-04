@@ -108,7 +108,6 @@ export const fastifyOtel = new FastifyOtelInstrumentation({
 
 - The `createRequire` function is only available in **Node.js version 12.2.0 and above**.
 - Using this workaround will result in the loss of type annotation information, which could affect development experience.
-- Native ESM support is planned for a future release.
 
 ## License
 
