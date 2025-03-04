@@ -88,6 +88,28 @@ const app = await fastify();
 
 For more information about OpenTelemetry, please refer to the [OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/) documentation.
 
+### Usage with ESM Modules
+
+Currently, this package does not natively support ESM Modules. As a temporary workaround, you can use Node.js's `createRequire` function to import the module. Below is an example of how to achieve this:
+
+```typescript
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const FastifyOtelInstrumentation = require('@fastify/otel');
+
+export const fastifyOtel = new FastifyOtelInstrumentation({
+  servername: 'my-app',
+  registerOnInitialization: true,
+});
+```
+
+**Important Notes:**
+
+- The `createRequire` function is only available in **Node.js version 12.2.0 and above**.
+- Using this workaround will result in the loss of type annotation information, which could affect development experience.
+- Native ESM support is planned for a future release.
+
 ## License
 
 Licensed under [MIT](./LICENSE).
