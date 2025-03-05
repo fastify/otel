@@ -866,6 +866,17 @@ describe('FastifyInstrumentation', () => {
         message: 'error'
       })
     })
+
+    test('should return the Fastify instance from the patched `addHook`', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      const instance = app.addHook('onRequest', function onRequest () {})
+
+      assert.equal(instance, app)
+    })
   })
 
   describe('Encapulated Context', () => {
