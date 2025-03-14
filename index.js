@@ -174,32 +174,36 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
 
       instance.addHook('onRequest', function (request, _reply, hookDone) {
-        if (this[kInstrumentation].isEnabled() === true) {
-          const rpcMetadata = getRPCMetadata(context.active())
-
-          if (
-            request.routeOptions.url != null &&
-            rpcMetadata?.type === RPCType.HTTP
-          ) {
-            rpcMetadata.route = request.routeOptions.url
-          }
-
-          /** @type {Span} */
-          const span = this[kInstrumentation].tracer.startSpan('request', {
-            attributes: {
-              [ATTR_SERVICE_NAME]:
-                instance[kInstrumentation].servername,
-              [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
-              [ATTR_HTTP_ROUTE]: request.url,
-              [ATTR_HTTP_REQUEST_METHOD]: request.method
-            }
-          })
-
-          request[kRequestContext] = trace.setSpan(context.active(), span)
-          request[kRequestSpan] = span
+        if (this[kInstrumentation].isEnabled() === false) {
+          return hookDone()
         }
 
-        hookDone()
+        const rpcMetadata = getRPCMetadata(context.active())
+
+        if (
+          request.routeOptions.url != null &&
+          rpcMetadata?.type === RPCType.HTTP
+        ) {
+          rpcMetadata.route = request.routeOptions.url
+        }
+
+        /** @type {Span} */
+        const span = this[kInstrumentation].tracer.startSpan('request', {
+          attributes: {
+            [ATTR_SERVICE_NAME]:
+              instance[kInstrumentation].servername,
+            [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
+            [ATTR_HTTP_ROUTE]: request.url,
+            [ATTR_HTTP_REQUEST_METHOD]: request.method
+          }
+        })
+
+        request[kRequestContext] = trace.setSpan(context.active(), span)
+        request[kRequestSpan] = span
+
+        context.with(request[kRequestContext], () => {
+          hookDone()
+        })
       })
 
       // onResponse is the last hook to be executed, only added for 404 handlers
@@ -349,7 +353,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             return handler.call(this, ...args)
           }
 
-          const ctx = request[kRequestContext]
+          const ctx = request[kRequestContext] ?? context.active()
           const span = instrumentation.tracer.startSpan(
             `handler - ${
               handler.name?.length > 0

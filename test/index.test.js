@@ -667,6 +667,58 @@ describe('FastifyInstrumentation', () => {
       assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
     })
 
+    test('should create span when the handler is overriden', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.addHook('onRoute', (routeOptions) => {
+        const { handler } = routeOptions
+        const someCustomHandlerArgumentForAPlugin = {}
+
+        routeOptions.handler = function (...args) {
+          return handler.call(this, someCustomHandlerArgumentForAPlugin, ...args)
+        }
+      })
+
+      app.get('/', async function helloworld () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [end, start] = spans
+
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'service.name': 'fastify',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+      assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'service.name': 'fastify',
+        'hook.callback.name': 'helloworld'
+      })
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
     test('should end spans upon error', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
