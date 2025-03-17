@@ -24,19 +24,19 @@ type FastifyError = any
 
 type HookHandlerDoneFunction = <TError extends Error = FastifyError>(err?: TError) => void
 
-export type FastifyPlugin = (
+type FastifyPlugin = (
   instance: FastifyInstance,
   opts: any,
   done: HookHandlerDoneFunction,
 ) => unknown | Promise<unknown>
 
-export interface FastifyOtelOptions {}
-export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
+interface FastifyOtelOptions {}
+interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
   servername?: string
   registerOnInitialization?: boolean
 }
 
-export interface FastifyInstance {
+interface FastifyInstance {
   version: string;
   register: (plugin: any) => FastifyInstance;
   after: (listener?: (err: Error) => void) => FastifyInstance;
@@ -49,11 +49,21 @@ export interface FastifyInstance {
 }
 
 declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {
-  static FastifyInstrumentation: FastifyOtelInstrumentation
+  static FastifyInstrumentation: typeof FastifyOtelInstrumentation
   constructor (config?: FastifyOtelInstrumentationOpts)
   init (): InstrumentationNodeModuleDefinition[]
   plugin (): FastifyPlugin
 }
 
-export default FastifyOtelInstrumentation
-export { FastifyOtelInstrumentation }
+// Declare the CommonJS export object
+declare namespace FastifyOtelInstrumentation {
+  export {
+    FastifyOtelInstrumentation,
+    FastifyOtelInstrumentationOpts,
+    FastifyOtelOptions,
+    FastifyPlugin,
+    FastifyInstance
+  }
+}
+
+export = FastifyOtelInstrumentation
