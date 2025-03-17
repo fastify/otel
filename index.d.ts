@@ -16,5 +16,4 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
   plugin (): (instance: FastifyInstance, opts: FastifyOtelOptions, done: (err?: Error) => void) => void
 }
 
-export default FastifyOtelInstrumentation
-export { FastifyOtelInstrumentation }
+export = FastifyOtelInstrumentation
