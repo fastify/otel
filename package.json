@@ -1,6 +1,6 @@
 {
   "name": "@fastify/otel",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Official Fastify OpenTelemetry Instrumentation",
   "main": "index.js",
   "type": "commonjs",
