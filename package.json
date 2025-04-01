@@ -51,7 +51,7 @@
     "@opentelemetry/contrib-test-utils": "^0.46.0",
     "@opentelemetry/instrumentation-http": "^0.200.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
-    "@opentelemetry/sdk-trace-node": "^1.29.0",
+    "@opentelemetry/sdk-trace-node": "^2.0.0",
     "@types/node": "^22.0.0",
     "c8": "^10.1.2",
     "cross-env": "^7.0.3",
