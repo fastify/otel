@@ -55,5 +55,4 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
   plugin (): FastifyPlugin
 }
 
-export default FastifyOtelInstrumentation
-export { FastifyOtelInstrumentation }
+export = FastifyOtelInstrumentation
