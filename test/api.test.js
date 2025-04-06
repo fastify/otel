@@ -7,12 +7,13 @@ const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
 
 const FastifyInstrumentation = require('..')
+const { FastifyOtelInstrumentation } = require('..')
 
 describe('Interface', () => {
   test('should exports support', t => {
     assert.equal(FastifyInstrumentation.name, 'FastifyOtelInstrumentation')
     assert.equal(
-      FastifyInstrumentation.default.name,
+      FastifyOtelInstrumentation.name,
       'FastifyOtelInstrumentation'
     )
     assert.equal(
@@ -29,6 +30,19 @@ describe('Interface', () => {
   test('FastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
     const app = Fastify()
     const instrumentation = new FastifyInstrumentation()
+    const plugin = instrumentation.plugin()
+
+    assert.equal(typeof plugin, 'function')
+    assert.equal(plugin.length, 3)
+
+    app.register(plugin)
+
+    await app.ready()
+  })
+
+  test('NamedFastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
+    const app = Fastify()
+    const instrumentation = new FastifyOtelInstrumentation()
     const plugin = instrumentation.plugin()
 
     assert.equal(typeof plugin, 'function')
