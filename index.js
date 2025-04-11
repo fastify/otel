@@ -1,6 +1,6 @@
 'use strict'
 const dc = require('node:diagnostics_channel')
-const { context, trace, SpanStatusCode } = require('@opentelemetry/api')
+const { context, trace, SpanStatusCode, propagation } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
   ATTR_HTTP_ROUTE,
@@ -175,7 +175,13 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
       instance.addHook('onRequest', function (request, _reply, hookDone) {
         if (this[kInstrumentation].isEnabled() === true) {
-          const rpcMetadata = getRPCMetadata(context.active())
+          let ctx = context.active()
+
+          if (trace.getSpan(ctx) == null) {
+            ctx = propagation.extract(ctx, request.headers)
+          }
+
+          const rpcMetadata = getRPCMetadata(ctx)
 
           if (
             request.routeOptions.url != null &&
@@ -184,7 +190,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             rpcMetadata.route = request.routeOptions.url
           }
 
-          /** @type {Span} */
+          /** @type {import('@opentelemetry/api').Span} */
           const span = this[kInstrumentation].tracer.startSpan('request', {
             attributes: {
               [ATTR_SERVICE_NAME]:
@@ -193,9 +199,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
               [ATTR_HTTP_ROUTE]: request.url,
               [ATTR_HTTP_REQUEST_METHOD]: request.method
             }
-          })
+          }, ctx)
 
-          request[kRequestContext] = trace.setSpan(context.active(), span)
+          request[kRequestContext] = trace.setSpan(ctx, span)
           request[kRequestSpan] = span
         }
 
