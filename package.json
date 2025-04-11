@@ -1,6 +1,6 @@
 {
   "name": "@fastify/otel",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Official Fastify OpenTelemetry Instrumentation",
   "main": "index.js",
   "type": "commonjs",
@@ -47,11 +47,11 @@
   "devDependencies": {
     "@fastify/pre-commit": "^2.1.0",
     "@fastify/type-provider-typebox": "^5.0.0-pre.fv5.1",
-    "@opentelemetry/context-async-hooks": "^1.29.0",
-    "@opentelemetry/contrib-test-utils": "^0.45.0",
-    "@opentelemetry/instrumentation-http": "^0.57.0",
+    "@opentelemetry/context-async-hooks": "^2.0.0",
+    "@opentelemetry/contrib-test-utils": "^0.46.0",
+    "@opentelemetry/instrumentation-http": "^0.200.0",
     "@opentelemetry/propagator-jaeger": "^2.0.0",
-    "@opentelemetry/sdk-trace-base": "^1.29.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.0",
     "@opentelemetry/sdk-trace-node": "^1.29.0",
     "@types/node": "^22.0.0",
     "c8": "^10.1.2",
@@ -63,8 +63,8 @@
     "tsd": "^0.31.0"
   },
   "dependencies": {
-    "@opentelemetry/core": "^1.29.0",
-    "@opentelemetry/instrumentation": "^0.57.0",
+    "@opentelemetry/core": "^2.0.0",
+    "@opentelemetry/instrumentation": "^0.200.0",
     "@opentelemetry/semantic-conventions": "^1.28.0"
   },
   "peerDependencies": {
