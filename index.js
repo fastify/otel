@@ -1,6 +1,6 @@
 'use strict'
 const dc = require('node:diagnostics_channel')
-const { context, trace, SpanStatusCode } = require('@opentelemetry/api')
+const { context, trace, propagation, SpanStatusCode } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
   ATTR_HTTP_ROUTE,
@@ -99,6 +99,21 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       // what is important is to bound it to the right instance
       instance.decorate(kAddHookOriginal, instance.addHook)
       instance.decorate(kSetNotFoundOriginal, instance.setNotFoundHandler)
+      instance.decorateRequest('opentelemetry', function openetelemetry () {
+        const ctx = this[kRequestContext]
+        const span = this[kRequestSpan]
+        return {
+          span,
+          tracer: instrumentation.tracer,
+          context: ctx,
+          inject: (carrier, setter) => {
+            return propagation.inject(ctx, carrier, setter)
+          },
+          extract: (carrier, getter) => {
+            return propagation.extract(ctx, carrier, getter)
+          }
+        }
+      })
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
 
