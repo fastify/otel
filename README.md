@@ -38,7 +38,7 @@ const FastifyOtelInstrumentation = require('@fastify/otel');
 
 // If serverName is not provided, it will fallback to OTEL_SERVICE_NAME
 // as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ servername: '<yourCustomApplicationName>' }); 
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ servername: '<yourCustomApplicationName>' });
 fastifyOtelInstrumentation.setTracerProvider(provider)
 
 module.exports = { fastifyOtelInstrumentation }
@@ -72,9 +72,12 @@ app.register((instance, opts, done) => {
 
 The plugin can be automatically registered with `registerOnInitialization` option set to `true`.
 In this case, it is necessary to await fastify instance.
+
 ```js
 // ... in your OTEL setup
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ registerOnInitialization: true });
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
+  registerOnInitialization: true,
+});
 
 // ... in your Fastify definition
 const Fastify = require('fastify');
@@ -87,6 +90,42 @@ const app = await fastify();
 >   - The HTTP instrumentation might cover all your routes although `@fastify/otel` just covers a subset of your application
 
 For more information about OpenTelemetry, please refer to the [OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/) documentation.
+
+## APIs
+
+### 'FastifyOtelRequestContext`
+
+The `FastifyOtelRequestContext` is a wrapper around the OpenTelemetry `Context` and `Tracer` APIs. It also provides a way to manage the context of a request and its associated spans as well as some utilities to extract and inject further traces from and to the trace carrier.
+
+```js
+const { fastifyOtelInstrumentation } = require('./otel.js');
+const Fastify = require('fastify');
+
+const app = fastify();
+await app.register(fastifyOtelInstrumentation.plugin());
+
+app.get('/', (req, reply) => {
+  const { context, tracer, span, inject, extract } = req.opentelemetry();
+
+  // Extract a parent span from the request headers
+  const parentCxt = extract(req.headers);
+
+  // Create a new span
+  const newSpan = tracer.startSpan('my-new-span', {
+    parent: parentCxt,
+  });
+  // Do some work
+  newSpan.end();
+
+  // Inject the new span into the response headers
+  const carrier = {};
+  inject(carrier);
+
+  reply.headers(carrier);
+
+  return 'hello world';
+});
+```
 
 ## License
 
