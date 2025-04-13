@@ -45,22 +45,20 @@ describe('Interface', () => {
     const instrumentation = new FastifyInstrumentation()
     const plugin = instrumentation.plugin()
 
-    t.plan(9)
-
     await app.register(plugin)
 
     app.get('/', (request, reply) => {
       const otel = request.opentelemetry()
 
-      t.assert.equal(typeof otel.span.spanContext().spanId, 'string')
-      t.assert.equal(typeof otel.tracer, 'object')
-      t.assert.equal(typeof otel.context, 'object')
-      t.assert.equal(typeof otel.inject, 'function')
-      t.assert.equal(otel.inject.length, 2)
-      t.assert.ok(!otel.inject({}))
-      t.assert.equal(typeof otel.extract, 'function')
-      t.assert.equal(otel.extract.length, 2)
-      t.assert.equal(typeof (otel.extract({})), 'object')
+      assert.equal(typeof otel.span.spanContext().spanId, 'string')
+      assert.equal(typeof otel.tracer, 'object')
+      assert.equal(typeof otel.context, 'object')
+      assert.equal(typeof otel.inject, 'function')
+      assert.equal(otel.inject.length, 2)
+      assert.ok(!otel.inject({}))
+      assert.equal(typeof otel.extract, 'function')
+      assert.equal(otel.extract.length, 2)
+      assert.equal(typeof (otel.extract({})), 'object')
 
       return 'world'
     })
