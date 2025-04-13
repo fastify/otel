@@ -14,12 +14,19 @@ const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 const {
   AsyncHooksContextManager
 } = require('@opentelemetry/context-async-hooks')
+const { JaegerPropagator } = require('@opentelemetry/propagator-jaeger')
 const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
 const {
   InMemorySpanExporter,
-  SimpleSpanProcessor
+  SimpleSpanProcessor,
+  AlwaysOnSampler
 } = require('@opentelemetry/sdk-trace-base')
-const { context, SpanStatusCode } = require('@opentelemetry/api')
+const {
+  context,
+  SpanStatusCode,
+  trace,
+  propagation
+} = require('@opentelemetry/api')
 
 const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http')
 
@@ -30,10 +37,14 @@ describe('FastifyInstrumentation', () => {
   const instrumentation = new FastifyInstrumentation()
   const contextManager = new AsyncHooksContextManager()
   const memoryExporter = new InMemorySpanExporter()
-  const provider = new NodeTracerProvider()
   const spanProcessor = new SimpleSpanProcessor(memoryExporter)
+  const provider = new NodeTracerProvider({
+    sampler: new AlwaysOnSampler(),
+    spanProcessors: [spanProcessor]
+  })
 
-  provider.addSpanProcessor(spanProcessor)
+  provider.register()
+  propagation.setGlobalPropagator(new JaegerPropagator())
   context.setGlobalContextManager(contextManager)
   httpInstrumentation.setTracerProvider(provider)
   instrumentation.setTracerProvider(provider)
@@ -92,7 +103,9 @@ describe('FastifyInstrumentation', () => {
     })
 
     test('should attach plugin if registerOnInitialization is true', async () => {
-      const instrumentation = new FastifyInstrumentation({ registerOnInitialization: true })
+      const instrumentation = new FastifyInstrumentation({
+        registerOnInitialization: true
+      })
       assert.notEqual(instrumentation._handleInitialization, undefined)
 
       const app = await Fastify()
@@ -149,6 +162,74 @@ describe('FastifyInstrumentation', () => {
         'service.name': 'fastify',
         'hook.callback.name': 'anonymous'
       })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should infer propagated span', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      let ctx = context.active()
+      const span = trace.getTracer().startSpan('test-fetch', {}, ctx)
+
+      ctx = trace.setSpan(ctx, span)
+
+      const headers = {}
+
+      propagation.inject(ctx, headers)
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`,
+        {
+          headers
+        }
+      )
+
+      span.end()
+
+      const fastifySpans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+      const [httpSpan] = memoryExporter
+        .getFinishedSpans()
+        .filter(
+          span =>
+            span.instrumentationLibrary.name ===
+            '@opentelemetry/instrumentation-http'
+        )
+
+      const [end, start] = fastifySpans
+
+      assert.equal(fastifySpans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'service.name': 'fastify',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+      assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'service.name': 'fastify',
+        'hook.callback.name': 'helloworld'
+      })
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(start.parentSpanId, httpSpan.spanContext().spanId)
+      assert.equal(httpSpan.parentSpanId, span.spanContext().spanId)
+      assert.equal(start.spanContext().traceId, span.spanContext().traceId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
