@@ -5,7 +5,6 @@ const assert = require('node:assert')
 const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
-const { trace, context } = require('@opentelemetry/api')
 
 const FastifyInstrumentation = require('..')
 
