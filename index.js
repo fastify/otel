@@ -48,8 +48,6 @@ const kAddHookOriginal = Symbol('fastify otel addhook original')
 const kSetNotFoundOriginal = Symbol('fastify otel setnotfound original')
 
 class FastifyOtelInstrumentation extends InstrumentationBase {
-  static FastifyOtelInstrumentation = FastifyOtelInstrumentation
-  static default = FastifyOtelInstrumentation
   servername = ''
 
   constructor (config) {
@@ -433,3 +431,4 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 }
 
 module.exports = FastifyOtelInstrumentation
+module.exports.FastifyOtelInstrumentation = FastifyOtelInstrumentation

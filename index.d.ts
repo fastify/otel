@@ -1,21 +1,13 @@
 /// <reference types="node" />
 
-import { Context, Span, TextMapGetter, TextMapSetter, Tracer } from '@opentelemetry/api'
-import { InstrumentationBase, InstrumentationConfig, InstrumentationNodeModuleDefinition } from '@opentelemetry/instrumentation'
+import { InstrumentationBase, InstrumentationNodeModuleDefinition } from '@opentelemetry/instrumentation'
 import { FastifyPluginCallback } from 'fastify'
 
-export interface FastifyOtelOptions {}
-export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
-  servername?: string
-  registerOnInitialization?: boolean
-}
-export type FastifyOtelRequestContext = {
-  span: Span,
-  tracer: Tracer,
-  context: Context,
-  inject: (carrier: {}, setter?: TextMapSetter) => void;
-  extract: (carrier: {}, getter?: TextMapGetter) => Context
-}
+import {
+  FastifyOtelInstrumentationOpts,
+  FastifyOtelOptions,
+  FastifyOtelRequestContext
+} from './types'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -23,12 +15,20 @@ declare module 'fastify' {
   }
 }
 
-declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {
-  static FastifyInstrumentation: FastifyOtelInstrumentation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+declare class FastifyOtelInstrumentationClass<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {
+  servername: string
   constructor (config?: FastifyOtelInstrumentationOpts)
   init (): InstrumentationNodeModuleDefinition[]
   plugin (): FastifyPluginCallback<FastifyOtelOptions>
 }
 
-export default FastifyOtelInstrumentation
-export { FastifyOtelInstrumentation }
+type FastifyOtelInstrumentationClassType = typeof FastifyOtelInstrumentationClass
+
+interface FastifyOtelInstrumentationExport extends FastifyOtelInstrumentationClassType {
+  FastifyOtelInstrumentation: FastifyOtelInstrumentationClassType
+}
+
+declare const exported: FastifyOtelInstrumentationExport
+
+export = exported

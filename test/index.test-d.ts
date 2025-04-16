@@ -3,7 +3,8 @@ import { InstrumentationBase, InstrumentationConfig } from '@opentelemetry/instr
 import { Context, Span, TextMapGetter, TextMapSetter, Tracer } from '@opentelemetry/api'
 import { fastify as Fastify, FastifyInstance, FastifyPluginCallback } from 'fastify'
 
-import { FastifyOtelInstrumentation, FastifyOtelInstrumentationOpts } from '..'
+import { FastifyOtelInstrumentation } from '..'
+import { FastifyOtelInstrumentationOpts } from '../types'
 
 expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
 expectAssignable<InstrumentationConfig>({ servername: 'server', enabled: true } as FastifyOtelInstrumentationOpts)
