@@ -93,7 +93,7 @@ For more information about OpenTelemetry, please refer to the [OpenTelemetry Jav
 
 ## APIs
 
-### 'FastifyOtelRequestContext`
+### `FastifyOtelRequestContext`
 
 The `FastifyOtelRequestContext` is a wrapper around the OpenTelemetry `Context` and `Tracer` APIs. It also provides a way to manage the context of a request and its associated spans as well as some utilities to extract and inject further traces from and to the trace carrier.
 
