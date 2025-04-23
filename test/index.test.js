@@ -125,6 +125,64 @@ describe('FastifyInstrumentation', () => {
       app.close()
     })
 
+    test('should ignore route path instrumentation if FastifyOptions#ignorePaths is set (string|glob)', async () => {
+      const instrumentation = new FastifyInstrumentation({
+        ignorePaths: '/health/*'
+      })
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/health/up', async (request, reply) => 'hello world')
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/health/up`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      assert.equal(spans.length, 0)
+      assert.equal(await response.text(), 'hello world')
+      assert.equal(response.status, 200)
+    })
+
+    test('should ignore route path instrumentation if FastifyOptions#ignorePaths is set (function)', async () => {
+      const instrumentation = new FastifyInstrumentation({
+        ignorePaths: (opts) => opts.url.includes('/health')
+      })
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/health', async (request, reply) => 'hello world')
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/health`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      assert.equal(spans.length, 0)
+      assert.equal(await response.text(), 'hello world')
+      assert.equal(response.status, 200)
+    })
+
     test('should create anonymous span (simple case)', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()

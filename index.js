@@ -1,6 +1,6 @@
 'use strict'
 const dc = require('node:diagnostics_channel')
-const { context, trace, SpanStatusCode, propagation } = require('@opentelemetry/api')
+const { context, trace, SpanStatusCode, propagation, diag } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
   ATTR_HTTP_ROUTE,
@@ -46,13 +46,43 @@ const kRequestSpan = Symbol('fastify otel request spans')
 const kRequestContext = Symbol('fastify otel request context')
 const kAddHookOriginal = Symbol('fastify otel addhook original')
 const kSetNotFoundOriginal = Symbol('fastify otel setnotfound original')
+const kIgnorePaths = Symbol('fastify otel ignore path')
 
 class FastifyOtelInstrumentation extends InstrumentationBase {
   servername = ''
+  logger = null
 
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
     this.servername = config?.servername ?? process.env.OTEL_SERVICE_NAME ?? 'fastify'
+    this.logger = diag.createComponentLogger({ namespace: PACKAGE_NAME })
+    this[kIgnorePaths] = null
+
+    if (config?.ignorePaths != null || process.env.OTEL_FASTIFY_IGNORE_PATHS != null) {
+      const ignorePaths = config?.ignorePaths ?? process.env.OTEL_FASTIFY_IGNORE_PATHS
+
+      if ((typeof ignorePaths !== 'string' || ignorePaths.length === 0) && typeof ignorePaths !== 'function') {
+        throw new TypeError(
+          'ignorePaths must be a string or a function'
+        )
+      }
+
+      let globMatcher = null
+
+      this[kIgnorePaths] = (routeOptions) => {
+        if (typeof ignorePaths === 'function') {
+          return ignorePaths(routeOptions)
+        } else {
+          // Using minimatch to match the path until path.matchesGlob is out of experimental
+          // path.matchesGlob uses minimatch internally
+          if (globMatcher == null) {
+            globMatcher = require('minimatch').minimatch
+          }
+
+          return globMatcher(routeOptions.url, ignorePaths)
+        }
+      }
+    }
   }
 
   enable () {
@@ -116,6 +146,13 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest(kRequestContext, null)
 
       instance.addHook('onRoute', function (routeOptions) {
+        if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
+          instrumentation.logger.debug(
+            `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it matches the ignore path`
+          )
+          return
+        }
+
         for (const hook of FASTIFY_HOOKS) {
           if (routeOptions[hook] != null) {
             const handlerLike = routeOptions[hook]
@@ -188,6 +225,14 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
       instance.addHook('onRequest', function (request, _reply, hookDone) {
         if (this[kInstrumentation].isEnabled() === false) {
+          return hookDone()
+        } else if (this[kInstrumentation][kIgnorePaths]?.({
+          url: request.url,
+          method: request.method,
+        }) === true) {
+          this[kInstrumentation].logger.debug(
+            `Ignoring request ${request.method} ${request.url} because it matches the ignore path`
+          )
           return hookDone()
         }
 

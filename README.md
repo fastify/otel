@@ -127,6 +127,36 @@ app.get('/', (req, reply) => {
 });
 ```
 
+## Interfaces
+
+### `FastifyOtelInstrumentationOptions`
+
+The options for the `FastifyOtelInstrumentation` class.
+
+```ts
+interface FastifyOtelInstrumentationOptions {
+  /**
+   * The name of the server. If not provided, it will fallback to OTEL_SERVICE_NAME
+   * as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
+   */
+  serverName?: string;
+  /**
+   * Whether to register the plugin on initialization.
+   * @default false
+   */
+  registerOnInitialization?: boolean;
+  /**
+   * String or function to ignore paths from being instrumented.
+   * If a string is provided, it will be used as a glob match pattern.
+   * If a function is provided, it will be called with the request options
+   * and should return true if the path should be ignored.
+   * 
+   * If not provided, instrumentation will attempt to fallback to OTEL_FASTIFY_IGNORE_PATHS; otherwise, all paths will be instrumented.
+   */
+  ignorePaths?: string | ((opts: { url: string, method: string }) => boolean);
+}
+```
+
 ## License
 
 Licensed under [MIT](./LICENSE).
