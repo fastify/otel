@@ -28,6 +28,7 @@ const FastifyInstrumentation = require('..')
 // https://opentelemetry.io/docs/languages/sdk-configuration/general/
 describe('Environment variable aware FastifyInstrumentation', () => {
   process.env.OTEL_SERVICE_NAME = 'my_app'
+  process.env.OTEL_FASTIFY_IGNORE_PATHS = '/health/*'
 
   const httpInstrumentation = new HttpInstrumentation()
   const instrumentation = new FastifyInstrumentation()
@@ -95,6 +96,33 @@ describe('Environment variable aware FastifyInstrumentation', () => {
       })
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should ignore route path instrumentation if FastifyOptions#ignorePaths is set (string|glob)', async () => {
+      const instrumentation = new FastifyInstrumentation()
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/health/up', async (request, reply) => 'hello world')
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/health/up`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      assert.equal(spans.length, 0)
+      assert.equal(await response.text(), 'hello world')
+      assert.equal(response.status, 200)
     })
   })
 })

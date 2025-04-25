@@ -40,6 +40,14 @@ describe('Interface', () => {
     await app.ready()
   })
 
+  test('FastifyOtelInstrumentationOpts#ignorePaths - should be a valid string or function', async t => {
+    assert.throws(() => new FastifyInstrumentation({ ignorePaths: 123 }))
+    assert.throws(() => new FastifyInstrumentation({ ignorePaths: '' }))
+    assert.throws(() => new FastifyInstrumentation({ ignorePaths: {} }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ ignorePaths: () => true }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ ignorePaths: '/foo' }))
+  })
+
   test('NamedFastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
     const app = Fastify()
     const instrumentation = new FastifyOtelInstrumentation()

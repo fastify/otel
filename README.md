@@ -97,6 +97,28 @@ For more information about OpenTelemetry, please refer to the [OpenTelemetry Jav
 
 The `FastifyOtelRequestContext` is a wrapper around the OpenTelemetry `Context` and `Tracer` APIs. It also provides a way to manage the context of a request and its associated spans as well as some utilities to extract and inject further traces from and to the trace carrier.
 
+#### `FastifyOtelRequestContext#context: Context`
+The OpenTelemetry context object.
+
+#### `FastifyOtelRequestContext#tracer: Tracer`
+The OpenTelemetry tracer object.
+
+#### `FastifyOtelRequestContext#span: Span`
+The OpenTelemetry span object.
+The span is created for each request and is automatically ended when the request is completed.
+
+#### `FastifyOtelRequestContext#inject: function`
+The OpenTelemetry inject function. It is used to inject the current context into a carrier object.
+
+The carrier object can be any object that can hold key-value pairs, such as an HTTP request or response headers.
+
+#### `FastifyOtelRequestContext#extract: function`
+The OpenTelemetry extract function. It is used to extract a parent context from a carrier object.
+
+The carrier object can be any object that can hold key-value pairs, such as an HTTP request or response headers.
+
+The extracted context can be used as a parent span for a new span.
+
 ```js
 const { fastifyOtelInstrumentation } = require('./otel.js');
 const Fastify = require('fastify');
@@ -124,6 +146,45 @@ app.get('/', (req, reply) => {
   reply.headers(carrier);
 
   return 'hello world';
+});
+```
+
+## Interfaces
+
+### `FastifyOtelInstrumentationOptions`
+
+The options for the `FastifyOtelInstrumentation` class.
+
+#### `FastifyOtelInstrumentationOptions#serverName: string`
+
+The name of the server. If not provided, it will fallback to `OTEL_SERVICE_NAME` as per [OpenTelemetry SDK Configuration](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
+
+#### `FastifyOtelInstrumentationOptions#registerOnInitialization: boolean`
+
+Whether to register the plugin on initialization. If set to `true`, the plugin will be registered automatically when the Fastify instance is created.
+
+This is useful for applications that want to ensure that all routes are instrumented without having to manually register the plugin.
+
+#### `FastifyOtelInstrumentationOptions#ignorePaths: string | function`
+
+String or function to ignore paths from being instrumented.
+
+If a string is provided, it will be used as a glob match pattern.
+
+If a function is provided, it will be called with the request options and should return true if the path should be ignored.
+
+#### Example
+
+```ts
+import { FastifyOtelInstrumentation } from '@fastify/otel';
+
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
+  serverName: 'my-server',
+  registerOnInitialization: true,
+  ignorePaths: (opts) => {
+    // Ignore all paths that start with /ignore
+    return opts.url.startsWith('/ignore');
+  },
 });
 ```
 
