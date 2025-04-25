@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.0](https://github.com/fastify/otel/compare/v0.6.0...v0.7.0) (2025-04-25)
+
+
+### Features
+
+* **#19:** implement ignore paths ([#48](https://github.com/fastify/otel/issues/48)) ([cfbef77](https://github.com/fastify/otel/commit/cfbef7772ca41386499de4210c19b869ac57ca43)), closes [#19](https://github.com/fastify/otel/issues/19)
+
 ## [0.6.0](https://github.com/fastify/otel/compare/v0.5.2...v0.6.0) (2025-04-22)
 
 
