@@ -65,6 +65,7 @@ app.register((instance, opts, done) => {
     // the parent context won't be instrumented
     app.get('/', () => 'hello world')
 
+    done()
 }, { prefix: '/nested' })
 ```
 
