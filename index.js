@@ -47,6 +47,7 @@ const kRequestContext = Symbol('fastify otel request context')
 const kAddHookOriginal = Symbol('fastify otel addhook original')
 const kSetNotFoundOriginal = Symbol('fastify otel setnotfound original')
 const kIgnorePaths = Symbol('fastify otel ignore path')
+const kSkipRequest = Symbol('fastify otel skip request')
 
 class FastifyOtelInstrumentation extends InstrumentationBase {
   servername = ''
@@ -130,7 +131,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest('opentelemetry', function openetelemetry () {
         const ctx = this[kRequestContext]
         const span = this[kRequestSpan]
+        const skipRequest = this[kSkipRequest]
         return {
+          enabled: skipRequest === false,
           span,
           tracer: instrumentation.tracer,
           context: ctx,
@@ -144,12 +147,30 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
+      instance.decorateRequest(kSkipRequest, false)
 
       instance.addHook('onRoute', function (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
           instrumentation.logger.debug(
             `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it matches the ignore path`
           )
+          return
+        }
+
+        if (routeOptions.otel === false) {
+          instrumentation.logger.debug(
+            `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it is disabled`
+          )
+
+          // Needed for the onRequest hook to skip the request (must run first)
+          if (routeOptions.onRequest != null) {
+            routeOptions.onRequest = Array.isArray(routeOptions.onRequest)
+              ? [skipRequestHook, ...routeOptions.onRequest]
+              : [skipRequestHook, routeOptions.onRequest]
+          } else {
+            routeOptions.onRequest = skipRequestHook
+          }
+
           return
         }
 
@@ -224,9 +245,14 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
 
       instance.addHook('onRequest', function (request, _reply, hookDone) {
-        if (this[kInstrumentation].isEnabled() === false) {
+        if (
+          this[kInstrumentation].isEnabled() === false ||
+          request[kSkipRequest] === true
+        ) {
           return hookDone()
-        } else if (this[kInstrumentation][kIgnorePaths]?.({
+        }
+
+        if (this[kInstrumentation][kIgnorePaths]?.({
           url: request.url,
           method: request.method,
         }) === true) {
@@ -470,6 +496,11 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             this
           )
         }
+      }
+
+      function skipRequestHook (request, _reply, hookDone) {
+        request[kSkipRequest] = true
+        return hookDone()
       }
     }
   }
