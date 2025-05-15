@@ -57,7 +57,7 @@ app.get('/', () => 'hello world')
 // as well as your instance level hooks.
 app.addHook('onError', () => /* do something */)
 // Manually skip telemetry for a specific route
-app.get('/healthcheck', { otel: false }, () => 'Up!')
+app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
 
 // you can also scope your instrumentation to only be enabled on a sub context
 // of your application

@@ -14,7 +14,7 @@ declare module 'fastify' {
     opentelemetry(): FastifyOtelRequestContext
   }
 
-  interface RouteShorthandOptions {
+  interface FastifyContextConfig {
     /** Set this to `true` to disable OpenTelemetry for the route */
     otel: boolean
   }

@@ -86,10 +86,11 @@ describe('Interface', () => {
       return 'world'
     })
 
-    await app.inject({
+    const res = await app.inject({
       method: 'GET',
       url: '/'
     })
+    assert.equal(res.payload, 'world')
   })
 
   test('FastifyRequest#opentelemetry() returns FastifyDisabledOtelRequestContext when disabled for a request', async () => {
@@ -100,7 +101,7 @@ describe('Interface', () => {
 
     await app.register(plugin)
 
-    app.get('/', { otel: false }, (request) => {
+    app.get('/', { config: { otel: false } }, (request) => {
       const otel = request.opentelemetry()
 
       assert.equal(otel.enabled, false)
@@ -117,7 +118,7 @@ describe('Interface', () => {
       return 'world'
     })
 
-    app.get('/withOtel', { otel: true }, (request) => {
+    app.get('/withOtel', { config: { otel: true } }, (request) => {
       const otel = request.opentelemetry()
 
       assert.equal(otel.enabled, true)
@@ -134,7 +135,7 @@ describe('Interface', () => {
       return 'world'
     })
 
-    app.get('/withOnRequest', { otel: false, async onRequest (req) { req.fakeData = 123 } }, (request) => {
+    app.get('/withOnRequest', { config: { otel: false }, async onRequest (req) { req.fakeData = 123 } }, (request) => {
       const otel = request.opentelemetry()
 
       assert.equal(request.fakeData, 123)
@@ -155,7 +156,7 @@ describe('Interface', () => {
     app.get(
       '/withManyOnRequest',
       {
-        otel: false,
+        config: { otel: false },
         onRequest: [
           function decorated (_request, _reply, _error, done) {
             done()
@@ -186,19 +187,25 @@ describe('Interface', () => {
       }
     )
 
-    await app.inject({
+    const res1 = await app.inject({
       method: 'GET',
       url: '/'
     })
+    assert.equal(res1.statusCode, 200)
+    assert.equal(res1.payload, 'world')
 
-    await app.inject({
+    const res2 = await app.inject({
       method: 'GET',
       url: '/withOtel'
     })
+    assert.equal(res2.statusCode, 200)
+    assert.equal(res2.payload, 'world')
 
-    await app.inject({
+    const res3 = await app.inject({
       method: 'GET',
       url: '/withOnRequest'
     })
+    assert.equal(res3.statusCode, 200)
+    assert.equal(res3.payload, 'world')
   })
 })
