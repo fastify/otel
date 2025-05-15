@@ -1,6 +1,6 @@
 {
   "name": "@fastify/otel",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Official Fastify OpenTelemetry Instrumentation",
   "main": "index.js",
   "type": "commonjs",
@@ -66,7 +66,7 @@
     "@opentelemetry/core": "^2.0.0",
     "@opentelemetry/instrumentation": "^0.200.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
-    "minimatch": "^10.0.1"
+    "minimatch": "^9.0.5"
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.9.0"
