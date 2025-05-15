@@ -26,9 +26,16 @@ app.register((nested, _opts, done) => {
 
 app.get('/', async function (request, reply) {
   const otel = request.opentelemetry()
-  expectAssignable<Span>(otel.span)
-  expectAssignable<Context>(otel.context)
-  expectAssignable<Tracer>(otel.tracer)
+
   expectAssignable<(carrier: any, setter?: TextMapSetter) => void>(otel.inject)
   expectAssignable<(carrier: any, getter?: TextMapGetter) => Context>(otel.extract)
+  expectAssignable<Tracer>(otel.tracer)
+
+  if (otel.enabled) {
+    expectAssignable<Span>(otel.span)
+    expectAssignable<Context>(otel.context)
+  } else {
+    expectAssignable<null>(otel.span)
+    expectAssignable<null>(otel.context)
+  }
 })
