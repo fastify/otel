@@ -146,7 +146,6 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
-      // instance.decorateRequest(kSkipRequest, false)
 
       instance.addHook('onRoute', function (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
