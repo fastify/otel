@@ -15,7 +15,7 @@ declare module 'fastify' {
   }
 
   interface FastifyContextConfig {
-    /** Set this to `true` to disable OpenTelemetry for the route */
+    /** Set this to `false` to disable OpenTelemetry for the route */
     otel: boolean
   }
 }
