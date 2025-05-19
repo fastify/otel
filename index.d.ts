@@ -1,9 +1,9 @@
 /// <reference types="node" />
 
-import { InstrumentationBase, InstrumentationNodeModuleDefinition } from '@opentelemetry/instrumentation'
-import { FastifyPluginCallback } from 'fastify'
+import { InstrumentationBase, type InstrumentationNodeModuleDefinition } from '@opentelemetry/instrumentation'
+import type { FastifyPluginCallback } from 'fastify'
 
-import {
+import type {
   FastifyOtelInstrumentationOpts,
   FastifyOtelOptions,
   FastifyOtelRequestContext
@@ -12,6 +12,11 @@ import {
 declare module 'fastify' {
   interface FastifyRequest {
     opentelemetry(): FastifyOtelRequestContext
+  }
+
+  interface FastifyContextConfig {
+    /** Set this to `false` to disable OpenTelemetry for the route */
+    otel: boolean
   }
 }
 

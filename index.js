@@ -130,7 +130,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest('opentelemetry', function openetelemetry () {
         const ctx = this[kRequestContext]
         const span = this[kRequestSpan]
+
         return {
+          enabled: this.routeOptions.config?.otel !== false,
           span,
           tracer: instrumentation.tracer,
           context: ctx,
@@ -150,6 +152,14 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           instrumentation.logger.debug(
             `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it matches the ignore path`
           )
+          return
+        }
+
+        if (routeOptions.config?.otel === false) {
+          instrumentation.logger.debug(
+            `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it is disabled`
+          )
+
           return
         }
 
@@ -224,9 +234,14 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
 
       instance.addHook('onRequest', function (request, _reply, hookDone) {
-        if (this[kInstrumentation].isEnabled() === false) {
+        if (
+          this[kInstrumentation].isEnabled() === false ||
+          request.routeOptions.config?.otel === false
+        ) {
           return hookDone()
-        } else if (this[kInstrumentation][kIgnorePaths]?.({
+        }
+
+        if (this[kInstrumentation][kIgnorePaths]?.({
           url: request.url,
           method: request.method,
         }) === true) {
