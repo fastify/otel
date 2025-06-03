@@ -64,7 +64,7 @@
   },
   "dependencies": {
     "@opentelemetry/core": "^2.0.0",
-    "@opentelemetry/instrumentation": "^0.200.0",
+    "@opentelemetry/instrumentation": "^0.201.1",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "minimatch": "^9.0.5"
   },
