@@ -2,8 +2,8 @@ import { expectAssignable } from 'tsd'
 import { InstrumentationBase, InstrumentationConfig } from '@opentelemetry/instrumentation'
 import { fastify as Fastify } from 'fastify'
 
-import { FastifyOtelInstrumentation } from '..'
-import { FastifyOtelInstrumentationOpts } from '../types'
+import { FastifyOtelInstrumentation } from '.'
+import { FastifyOtelInstrumentationOpts } from './types'
 
 expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
 expectAssignable<InstrumentationConfig>({ servername: 'server', enabled: true } as FastifyOtelInstrumentationOpts)
