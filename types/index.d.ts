@@ -20,7 +20,6 @@ declare module 'fastify' {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {
   servername: string
   constructor (config?: FastifyOtelInstrumentationOpts)
@@ -31,6 +30,7 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
 declare namespace exported {
   export type { FastifyOtelInstrumentationOpts }
   export { FastifyOtelInstrumentation }
+  export { FastifyOtelInstrumentation as default }
 }
 
 export = exported
