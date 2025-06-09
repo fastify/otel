@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.9.1](https://github.com/fastify/otel/compare/v0.9.0...v0.9.1) (2025-06-09)
+
+
+### Bug Fixes
+
+* **types:** add default export for FastifyOtelInstrumentation ([#66](https://github.com/fastify/otel/issues/66)) ([054ea65](https://github.com/fastify/otel/commit/054ea65f076916f8218981144a4a8eb961e59d3e))
+
 ## [0.8.0](https://github.com/fastify/otel/compare/v0.7.0...v0.8.0) (2025-05-11)
 
 
