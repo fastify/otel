@@ -208,4 +208,55 @@ describe('Interface', () => {
     assert.equal(res3.statusCode, 200)
     assert.equal(res3.payload, 'world')
   })
+
+  test('FastifyInstrumentation#requestHook should be invoked and can mutate span', async () => {
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+
+    let hookCalled = false
+
+    const instrumentation = new FastifyInstrumentation({
+      requestHook: (span, { request }) => {
+        hookCalled = true
+        span.setAttribute('x-user', request.headers['x-user'] ?? 'anon')
+      }
+    })
+
+    await app.register(instrumentation.plugin())
+
+    app.get('/', () => 'ok')
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/',
+      headers: { 'x-user': 'baki' },
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.equal(hookCalled, true)
+  })
+
+  test('FastifyInstrumentation#requestHook should not crash when it throws', async () => {
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+
+    const instrumentation = new FastifyInstrumentation({
+      requestHook: () => {
+        throw new Error('test')
+      }
+    })
+
+    await app.register(instrumentation.plugin())
+
+    app.get('/', () => 'ok')
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+  })
 })
