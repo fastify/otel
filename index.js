@@ -284,7 +284,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         try {
           this[kInstrumentation]._requestHook?.(span, { request })
         } catch (err) {
-          this[kInstrumentation].logger.error('requestHook threw', err)
+          this[kInstrumentation].logger.error({ err }, 'requestHook threw')
         }
 
         request[kRequestContext] = trace.setSpan(ctx, span)
