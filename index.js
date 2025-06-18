@@ -282,7 +282,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }, ctx)
 
         try {
-          this[kInstrumentation]._requestHook?.(span, { request })
+          this[kInstrumentation]._requestHook?.(span, request)
         } catch (err) {
           this[kInstrumentation].logger.error({ err }, 'requestHook threw')
         }
