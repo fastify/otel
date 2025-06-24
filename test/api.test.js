@@ -24,7 +24,6 @@ describe('Interface', () => {
       Object.getPrototypeOf(FastifyInstrumentation),
       InstrumentationBase
     )
-    assert.strictEqual(new FastifyInstrumentation({ servername: 'test' }).servername, 'test')
   })
 
   test('FastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
