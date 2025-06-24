@@ -57,7 +57,7 @@ describe('Environment variable aware FastifyInstrumentation', () => {
       memoryExporter.reset()
     })
 
-    test('should create span with service.name equal to general sdk configuration', async t => {
+    test('should create spans with fastify-specific attributes (service.name comes from resource)', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
 
@@ -83,7 +83,6 @@ describe('Environment variable aware FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
-        'service.name': 'my_app',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -91,7 +90,6 @@ describe('Environment variable aware FastifyInstrumentation', () => {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
         'http.route': '/',
-        'service.name': 'my_app',
         'hook.callback.name': 'anonymous'
       })
       assert.equal(response.status, 200)

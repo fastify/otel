@@ -36,9 +36,9 @@ Example:
 // ... in your OTEL setup
 const FastifyOtelInstrumentation = require('@fastify/otel');
 
-// If serverName is not provided, it will fallback to OTEL_SERVICE_NAME
+// Service name comes from OpenTelemetry resources (via NodeSDK or OTEL_SERVICE_NAME)
 // as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ servername: '<yourCustomApplicationName>' });
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation();
 fastifyOtelInstrumentation.setTracerProvider(provider)
 
 module.exports = { fastifyOtelInstrumentation }
@@ -164,9 +164,7 @@ app.get('/', (req, reply) => {
 
 The options for the `FastifyOtelInstrumentation` class.
 
-#### `FastifyOtelInstrumentationOptions#serverName: string`
 
-The name of the server. If not provided, it will fallback to `OTEL_SERVICE_NAME` as per [OpenTelemetry SDK Configuration](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
 
 #### `FastifyOtelInstrumentationOptions#registerOnInitialization: boolean`
 
@@ -187,7 +185,7 @@ A **synchronous** callback that runs immediately after the root request span is 
 * **span** – the newly-created `Span`
 * **info.request** – the current `FastifyRequest`
 
-Use it to add custom attributes, events, or rename the span.  
+Use it to add custom attributes, events, or rename the span.
 If the function throws, the error is caught and logged so the request flow is never interrupted.
 
 
@@ -197,18 +195,20 @@ If the function throws, the error is caught and logged so the request flow is ne
 import { FastifyOtelInstrumentation } from '@fastify/otel';
 
 const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
-  serverName: 'my-server',
   registerOnInitialization: true,
   ignorePaths: (opts) => {
     // Ignore all paths that start with /ignore
     return opts.url.startsWith('/ignore');
   },
 });
+
+// Service name should be set via environment variable:
+// export OTEL_SERVICE_NAME=my-server
+// or via NodeSDK resource configuration
 ```
 
 ```js
 const otel = new FastifyOtelInstrumentation({
-  servername: 'my-app',
   requestHook: (span, request) => {
     // attach user info
     span.setAttribute('user.id', request.headers['x-user-id'] ?? 'anonymous')
