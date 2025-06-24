@@ -29,35 +29,133 @@ It must be configured before defining routes and other plugins in order to cover
   - `onResponse`
   - `onError`
 - Instruments automatically custom 404 Not Found handler
+- TODO: Clarify server shutdown/cleanup around otel metrics/traces
 
-Example:
+## Example
 
 ```js
-// ... in your OTEL setup
-const FastifyOtelInstrumentation = require('@fastify/otel');
+// otel.js
+// Sets up metrics, tracing, HTTP & Node runtime instrumentation, and host metrics.
+// Uses ConsoleSpanExporter for local debugging of spans.
+const { NodeSDK } = require('@opentelemetry/sdk-node')
+const { ConsoleSpanExporter } = require('@opentelemetry/sdk-trace-node')
+const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base')
+const { PrometheusExporter } = require('@opentelemetry/exporter-prometheus')
+const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http')
+const { FastifyOtelInstrumentation } = require('@fastify/otel')
+const { metrics, trace } = require('@opentelemetry/api')
+const { resourceFromAttributes } = require('@opentelemetry/resources')
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions')
 
-// If serverName is not provided, it will fallback to OTEL_SERVICE_NAME
-// as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ servername: '<yourCustomApplicationName>' });
-fastifyOtelInstrumentation.setTracerProvider(provider)
+// Set up your preferred processors and exporters
+const traceExporter = new ConsoleSpanExporter()
+const spanProcessor = new SimpleSpanProcessor(traceExporter)
+const prometheusExporter = new PrometheusExporter({ port: 9091 })
 
-module.exports = { fastifyOtelInstrumentation }
+const sdk = new NodeSDK({
+  resource: resourceFromAttributes({
+    // This can also be set by OTEL_SERVICE_NAME
+    // Instruments inherit from the SDK resource attributes
+    [SemanticResourceAttributes.SERVICE_NAME]: 'my-service-name',
+  }),
+  spanProcessor,
+  metricReader: prometheusExporter,
+  instrumentations: [
+    // HttpInstrumentation is required for FastifyOtelInstrumentation to work
+    new HttpInstrumentation(),
+    new FastifyOtelInstrumentation({
+      // Automatically register the @fastify/otel fastify plugin for all routes
+      registerOnInitialization: true,
+    })
+  ],
+})
 
-// ... in your Fastify definition
-const { fastifyOtelInstrumentation } = require('./otel.js');
-const Fastify = require('fastify');
+sdk.start()
+module.exports = { sdk }
 
-const app = fastify();
+process.on('SIGTERM', () => {
+  // @fastify/otel doesn't set up graceful shutdown of span processing
+  sdk.shutdown()
+    .then(
+      () => console.log('SDK shut down successfully'),
+      (err) => console.log(new Error('Error shutting down SDK', { cause: err }))
+    )
+})
+```
+
+Otel recommends using the loader/require flag for loading your otel setup file.
+For ESM ("type"="module"), you must also pass a `--experimental-loader` flag.
+
+[Fastify-cli](https://github.com/fastify/fastify-cli):
+
+- `NODE_OPTIONS='--import otel.js --experimental-loader=@opentelemetry/instrumentation/hook.mjs' fastify start` for esm
+- `fastify start --require otel.js` for cjs
+
+Node.js:
+
+- `node --experimental-loader=@opentelemetry/instrumentation/hook.mjs --import ./otel.js ./app.js` for esm
+- `node --require ./otel.js ./app.js` for cjs
+
+```js
+// app.js
+import Fastify from 'fastify';
+
+// Because we used a loader flag and registerOnInitialization=true
+// All routes will automatically be insturmented
+const app = await Fastify();
+
+app.get('/', async () => 'hello world');
+
+app.get(
+  '/healthcheck',
+  { config: { otel: false } },       // skip tracing/metrics for this route
+  async () => 'Up!'
+);
+
+// example of encapsulated context with its own instrumentation
+app.register(async (instance) => {
+  // will inherit global FastifyOtelInstrumentation because we registered with
+  // registerOnInitialization
+  instance.get('/', async () => 'nested hello world');
+}, { prefix: '/nested' });
+
+await app.listen({ port: 3000 });
+console.log('⚡ Fastify listening on http://localhost:3000');
+````
+
+### Manual plugin registration
+
+You can also export your fastifyOtelInstrumentation to register the plugin on specific routes instead of all routes.
+
+```js
+// otel.js
+const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
+  // Set this to false to not automatically install the fastify plugin on all routes
+  registerOnInitialization: false,
+})
+
+const sdk = new NodeSDK({
+  // ...
+  instrumentations: [
+    // ...
+    fastifyOtelInstrumentation
+  ],
+})
+
+sdk.start()
+module.exports = { sdk, fastifyOtelInstrumentation }
+```
+
+```js
+import Fastify from 'fastify';
+import { fastifyOtelInstrumentation } from './otel.js';
+
+const app = await Fastify();
 // It is necessary to await for its register as it requires to be able
 // to intercept all route definitions
 await app.register(fastifyOtelInstrumentation.plugin());
 
-// automatically all your routes will be instrumented
-app.get('/', () => 'hello world')
-// as well as your instance level hooks.
-app.addHook('onError', () => /* do something */)
-// Manually skip telemetry for a specific route
-app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
+app.get('/', async () => 'hello world');
 
 // you can also scope your instrumentation to only be enabled on a sub context
 // of your application
@@ -69,23 +167,7 @@ app.register((instance, opts, done) => {
 
     done()
 }, { prefix: '/nested' })
-```
-
-### Automatic plugin registration
-
-The plugin can be automatically registered with `registerOnInitialization` option set to `true`.
-In this case, it is necessary to await fastify instance.
-
-```js
-// ... in your OTEL setup
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
-  registerOnInitialization: true,
-});
-
-// ... in your Fastify definition
-const Fastify = require('fastify');
-const app = await fastify();
-```
+````
 
 > **Notes**:
 >
