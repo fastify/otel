@@ -51,12 +51,16 @@ const kIgnorePaths = Symbol('fastify otel ignore path')
 class FastifyOtelInstrumentation extends InstrumentationBase {
   servername = ''
   logger = null
+  _requestHook = null
 
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
     this.servername = config?.servername ?? process.env.OTEL_SERVICE_NAME ?? 'fastify'
     this.logger = diag.createComponentLogger({ namespace: PACKAGE_NAME })
     this[kIgnorePaths] = null
+    if (typeof config?.requestHook === 'function') {
+      this._requestHook = config.requestHook
+    }
 
     if (config?.ignorePaths != null || process.env.OTEL_FASTIFY_IGNORE_PATHS != null) {
       const ignorePaths = config?.ignorePaths ?? process.env.OTEL_FASTIFY_IGNORE_PATHS
@@ -276,6 +280,12 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             [ATTR_HTTP_REQUEST_METHOD]: request.method
           }
         }, ctx)
+
+        try {
+          this[kInstrumentation]._requestHook?.(span, request)
+        } catch (err) {
+          this[kInstrumentation].logger.error({ err }, 'requestHook threw')
+        }
 
         request[kRequestContext] = trace.setSpan(ctx, span)
         request[kRequestSpan] = span

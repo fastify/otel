@@ -5,6 +5,8 @@ const assert = require('node:assert')
 const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
+const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
+const { InMemorySpanExporter, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base')
 
 const FastifyInstrumentation = require('..')
 const { FastifyOtelInstrumentation } = require('..')
@@ -207,5 +209,69 @@ describe('Interface', () => {
     })
     assert.equal(res3.statusCode, 200)
     assert.equal(res3.payload, 'world')
+  })
+
+  test('FastifyInstrumentation#requestHook should be invoked and can mutate span', async () => {
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+
+    let hookCalled = false
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation({
+      requestHook: (span, request) => {
+        hookCalled = true
+        span.setAttribute('x-user', request.headers['x-user'] ?? 'anon')
+      }
+    })
+    instrumentation.setTracerProvider(provider)
+
+    await app.register(instrumentation.plugin())
+
+    app.get('/', () => 'ok')
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/',
+      headers: { 'x-user': 'baki' },
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.equal(hookCalled, true)
+
+    const spans = exporter.getFinishedSpans()
+    assert.equal(spans.length, 2)
+
+    const rootSpan = spans.find(s => s.name === 'request')
+    assert.ok(rootSpan)
+    assert.equal(rootSpan.attributes['x-user'], 'baki')
+  })
+
+  test('FastifyInstrumentation#requestHook should not crash when it throws', async () => {
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+
+    const instrumentation = new FastifyInstrumentation({
+      requestHook: () => {
+        throw new Error('test')
+      }
+    })
+
+    await app.register(instrumentation.plugin())
+
+    app.get('/', () => 'ok')
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
   })
 })

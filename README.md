@@ -176,7 +176,16 @@ If a string is provided, it will be used as a glob match pattern.
 
 If a function is provided, it will be called with the request options and should return true if the path should be ignored.
 
-#### Example
+#### `FastifyOtelInstrumentationOptions#requestHook: function`
+A **synchronous** callback that runs immediately after the root request span is created.
+* **span** – the newly-created `Span`
+* **info.request** – the current `FastifyRequest`
+
+Use it to add custom attributes, events, or rename the span.  
+If the function throws, the error is caught and logged so the request flow is never interrupted.
+
+
+#### Examples
 
 ```ts
 import { FastifyOtelInstrumentation } from '@fastify/otel';
@@ -189,6 +198,19 @@ const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
     return opts.url.startsWith('/ignore');
   },
 });
+```
+
+```js
+const otel = new FastifyOtelInstrumentation({
+  servername: 'my-app',
+  requestHook: (span, request) => {
+    // attach user info
+    span.setAttribute('user.id', request.headers['x-user-id'] ?? 'anonymous')
+
+    // optional: give the span a cleaner name
+    span.updateName(`${request.method} ${request.routerPath}`)
+  }
+})
 ```
 
 ## License
