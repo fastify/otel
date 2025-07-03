@@ -25,6 +25,7 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
   constructor (config?: FastifyOtelInstrumentationOpts)
   init (): InstrumentationNodeModuleDefinition[]
   plugin (): FastifyPluginCallback<FastifyOtelOptions>
+  requestHook?: (span: import('@opentelemetry/api').Span, request: import('fastify').FastifyRequest) => void
 }
 
 declare namespace exported {
