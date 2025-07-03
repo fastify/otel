@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.9.2](https://github.com/fastify/otel/compare/v0.9.1...v0.9.2) (2025-07-03)
+
+
+### Features
+
+* add requestHook support to FastifyOtelInstrumentation ([#67](https://github.com/fastify/otel/issues/67)) ([7ef85ed](https://github.com/fastify/otel/commit/7ef85ed7c095fbda38b4fd864e89a620658970b3))
+
 ### [0.9.1](https://github.com/fastify/otel/compare/v0.9.0...v0.9.1) (2025-06-09)
 
 
