@@ -1,14 +1,21 @@
 import { expectAssignable } from 'tsd'
 import { InstrumentationBase, InstrumentationConfig } from '@opentelemetry/instrumentation'
 import { Context, Span, TextMapGetter, TextMapSetter, Tracer } from '@opentelemetry/api'
-import { fastify as Fastify, FastifyInstance, FastifyPluginCallback } from 'fastify'
+import { fastify as Fastify, FastifyInstance, FastifyPluginCallback, FastifyRequest } from 'fastify'
 
 import FastifyInstrumentation, { FastifyOtelInstrumentation } from '.'
 import { FastifyOtelInstrumentationOpts } from './types'
 
 expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
 expectAssignable<InstrumentationBase>(new FastifyInstrumentation())
-expectAssignable<InstrumentationConfig>({ servername: 'server', enabled: true } as FastifyOtelInstrumentationOpts)
+expectAssignable<InstrumentationConfig>({
+  servername: 'server',
+  enabled: true,
+  requestHook (span, request) {
+    expectAssignable<Span>(span)
+    expectAssignable<FastifyRequest>(request)
+  }
+} as FastifyOtelInstrumentationOpts)
 expectAssignable<InstrumentationConfig>({} as FastifyOtelInstrumentationOpts)
 
 const app = Fastify()
