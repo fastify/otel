@@ -47,3 +47,20 @@ app.get('/', async function (request, reply) {
     expectAssignable<null>(otel.context)
   }
 })
+
+// Test that otel field in FastifyContextConfig is optional
+app.get('/with-config', { config: { } }, async function (_request, _reply) {
+  return { hello: 'world' }
+})
+
+app.get('/with-otel-true', { config: { otel: true } }, async function (_request, _reply) {
+  return { hello: 'world' }
+})
+
+app.get('/with-otel-false', { config: { otel: false } }, async function (_request, _reply) {
+  return { hello: 'world' }
+})
+
+app.get('/with-other-config', { config: { customField: 'value' } }, async function (_request, _reply) {
+  return { hello: 'world' }
+})
