@@ -21,7 +21,6 @@ declare module 'fastify' {
 }
 
 declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentationOpts = FastifyOtelInstrumentationOpts> extends InstrumentationBase<Config> {
-  servername: string
   constructor (config?: FastifyOtelInstrumentationOpts)
   init (): InstrumentationNodeModuleDefinition[]
   plugin (): FastifyPluginCallback<FastifyOtelOptions>
