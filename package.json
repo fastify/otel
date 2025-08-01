@@ -49,7 +49,7 @@
     "@fastify/type-provider-typebox": "^5.0.0-pre.fv5.1",
     "@opentelemetry/context-async-hooks": "^2.0.0",
     "@opentelemetry/contrib-test-utils": "^0.49.0",
-    "@opentelemetry/instrumentation-http": "^0.202.0",
+    "@opentelemetry/instrumentation-http": "^0.203.0",
     "@opentelemetry/propagator-jaeger": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
     "@opentelemetry/sdk-trace-node": "^1.29.0",
