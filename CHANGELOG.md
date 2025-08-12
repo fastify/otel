@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.9.4](https://github.com/fastify/otel/compare/v0.9.3...v0.9.4) (2025-08-12)
+
+
+### Features
+
+* Make otel optional in FastifyContextConfig ([#78](https://github.com/fastify/otel/issues/78)) ([747f45e](https://github.com/fastify/otel/commit/747f45e4388faae91789867721ed02f18a2f8cfa))
+
 ### [0.9.3](https://github.com/fastify/otel/compare/v0.9.2...v0.9.3) (2025-07-09)
 
 
