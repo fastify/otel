@@ -25,7 +25,7 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
     sdk.start()
     after(() => sdk.shutdown())
 
-    const app = await fastify()
+    const app = fastify()
     await app.register(new FastifyOtelInstrumentation().plugin())
     app.get('/qq', async () => 'hello world')
 
