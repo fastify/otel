@@ -36,7 +36,7 @@ Example:
 // ... in your OTEL setup
 const FastifyOtelInstrumentation = require('@fastify/otel');
 
-// If serverName is not provided, it will fallback to OTEL_SERVICE_NAME
+// Service name comes from OpenTelemetry resources (via NodeSDK or OTEL_SERVICE_NAME)
 // as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
 const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({ servername: '<yourCustomApplicationName>' });
 fastifyOtelInstrumentation.setTracerProvider(provider)
@@ -158,9 +158,7 @@ app.get('/', (req, reply) => {
 
 The options for the `FastifyOtelInstrumentation` class.
 
-#### `FastifyOtelInstrumentationOptions#serverName: string`
 
-The name of the server. If not provided, it will fallback to `OTEL_SERVICE_NAME` as per [OpenTelemetry SDK Configuration](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
 
 #### `FastifyOtelInstrumentationOptions#registerOnInitialization: boolean`
 
@@ -191,13 +189,16 @@ If the function throws, the error is caught and logged so the request flow is ne
 import { FastifyOtelInstrumentation } from '@fastify/otel';
 
 const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
-  serverName: 'my-server',
   registerOnInitialization: true,
   ignorePaths: (opts) => {
     // Ignore all paths that start with /ignore
     return opts.url.startsWith('/ignore');
   },
 });
+
+// Service name should be set via environment variable:
+// export OTEL_SERVICE_NAME=my-server
+// or via NodeSDK resource configuration
 ```
 
 ```js
