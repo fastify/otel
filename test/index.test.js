@@ -206,6 +206,7 @@ describe('FastifyInstrumentation', () => {
       const [end, start] = spans
 
       assert.equal(spans.length, 2)
+      assert.equal(start.name, 'request')
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
@@ -213,6 +214,8 @@ describe('FastifyInstrumentation', () => {
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
+
+      assert.equal(end.name, 'handler - fastify -> @fastify/otel')
       assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
@@ -270,6 +273,7 @@ describe('FastifyInstrumentation', () => {
       const [end, start] = fastifySpans
 
       assert.equal(fastifySpans.length, 2)
+      assert.equal(start.name, 'request')
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
@@ -277,6 +281,7 @@ describe('FastifyInstrumentation', () => {
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
+      assert.equal(end.name, 'handler - helloworld')
       assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
@@ -324,6 +329,8 @@ describe('FastifyInstrumentation', () => {
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
+
+      assert.equal(end.name, 'handler - helloworld')
       assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
@@ -345,7 +352,7 @@ describe('FastifyInstrumentation', () => {
       app.get(
         '/',
         {
-          preHandler: function preHandler (request, reply, done) {
+          preHandler: function somePreHandler (request, reply, done) {
             done()
           },
           onRequest: [
@@ -384,13 +391,8 @@ describe('FastifyInstrumentation', () => {
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
-      assert.deepStrictEqual(start.attributes, {
-        'fastify.root': '@fastify/otel',
-        'http.route': '/',
-        'service.name': 'fastify',
-        'http.request.method': 'GET',
-        'http.response.status_code': 200
-      })
+
+      assert.equal(onReq1.name, 'onRequest - onRequest1')
       assert.deepStrictEqual(onReq1.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'onRequest1',
@@ -398,6 +400,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'service.name': 'fastify',
       })
+      assert.equal(onReq2.name, 'onRequest - fastify -> @fastify/otel')
       assert.deepStrictEqual(onReq2.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'anonymous',
@@ -405,13 +408,15 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'service.name': 'fastify',
       })
+      assert.equal(preHandler.name, 'preHandler - somePreHandler')
       assert.deepStrictEqual(preHandler.attributes, {
         'fastify.type': 'route-hook',
-        'hook.callback.name': 'preHandler',
+        'hook.callback.name': 'somePreHandler',
         'hook.name': 'fastify -> @fastify/otel - route -> preHandler',
         'http.route': '/',
         'service.name': 'fastify',
       })
+      assert.equal(end.name, 'handler - helloworld')
       assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
@@ -473,13 +478,7 @@ describe('FastifyInstrumentation', () => {
         'service.name': 'fastify',
         'http.response.status_code': 200
       })
-      assert.deepStrictEqual(start.attributes, {
-        'fastify.root': '@fastify/otel',
-        'http.route': '/',
-        'http.request.method': 'GET',
-        'service.name': 'fastify',
-        'http.response.status_code': 200
-      })
+      assert.equal(onReq1.name, 'onSend - onSend')
       assert.deepStrictEqual(onReq1.attributes, {
         'fastify.type': 'route-hook',
         'hook.callback.name': 'onSend',
@@ -487,12 +486,14 @@ describe('FastifyInstrumentation', () => {
         'service.name': 'fastify',
         'http.route': '/'
       })
+      assert.equal(preValidation.name, 'preValidation - preValidation')
       assert.deepStrictEqual(preValidation.attributes, {
         'fastify.type': 'hook',
         'hook.callback.name': 'preValidation',
         'service.name': 'fastify',
         'hook.name': 'fastify -> @fastify/otel - preValidation'
       })
+      assert.equal(end.name, 'handler - helloworld')
       assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
         'fastify.type': 'request-handler',
@@ -541,6 +542,7 @@ describe('FastifyInstrumentation', () => {
         'service.name': 'fastify',
         'http.response.status_code': 500
       })
+      assert.equal(preHandler.name, 'preHandler - fastify -> @fastify/otel')
       assert.deepStrictEqual(preHandler.attributes, {
         'fastify.type': 'hook',
         'hook.callback.name': 'anonymous',
@@ -626,6 +628,7 @@ describe('FastifyInstrumentation', () => {
         'service.name': 'fastify',
         'http.response.status_code': 404
       })
+      assert.equal(fof.name, 'notFoundHandler - notFoundHandler')
       assert.deepStrictEqual(fof.attributes, {
         'hook.name': 'fastify -> @fastify/otel - not-found-handler',
         'fastify.type': 'hook',
@@ -1160,6 +1163,7 @@ describe('FastifyInstrumentation', () => {
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
+        assert.equal(end.name, 'handler - plugin')
         assert.deepStrictEqual(end.attributes, {
           'hook.name': 'plugin - route-handler',
           'fastify.type': 'request-handler',
@@ -1205,6 +1209,7 @@ describe('FastifyInstrumentation', () => {
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
+        assert.equal(end.name, 'handler - helloworld')
         assert.deepStrictEqual(end.attributes, {
           'hook.name': 'nested -> @fastify/otel - route-handler',
           'fastify.type': 'request-handler',
@@ -1270,13 +1275,7 @@ describe('FastifyInstrumentation', () => {
           'service.name': 'fastify',
           'http.response.status_code': 200
         })
-        assert.deepStrictEqual(start.attributes, {
-          'fastify.root': '@fastify/otel',
-          'http.route': '/',
-          'http.request.method': 'GET',
-          'service.name': 'fastify',
-          'http.response.status_code': 200
-        })
+        assert.equal(onReq1.name, 'onSend - onSend')
         assert.deepStrictEqual(onReq1.attributes, {
           'fastify.type': 'route-hook',
           'hook.callback.name': 'onSend',
@@ -1284,12 +1283,14 @@ describe('FastifyInstrumentation', () => {
           'service.name': 'fastify',
           'http.route': '/'
         })
+        assert.equal(preValidation.name, 'preValidation - nested')
         assert.deepStrictEqual(preValidation.attributes, {
           'fastify.type': 'hook',
           'hook.callback.name': 'anonymous',
           'service.name': 'fastify',
           'hook.name': 'nested - preValidation'
         })
+        assert.equal(end.name, 'handler - helloworld')
         assert.deepStrictEqual(end.attributes, {
           'hook.name': 'nested - route-handler',
           'fastify.type': 'request-handler',
