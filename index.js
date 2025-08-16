@@ -91,9 +91,18 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
   enable () {
     if (this._handleInitialization === undefined && this.getConfig().registerOnInitialization) {
-      const FastifyInstrumentationPlugin = this.plugin()
       this._handleInitialization = (message) => {
-        message.fastify.register(FastifyInstrumentationPlugin)
+        // Cannot use `fastify.register(plugin)` because it is lazily executed and
+        // thus requires user code to await fastify instance first.
+        this.plugin()(message.fastify, undefined, () => {})
+
+        // Add an empty plugin to keep `app.hasPlugin('@fastify/otel')` invariant
+        const emptyPlugin = (_, __, done) => {
+          done()
+        }
+        emptyPlugin[Symbol.for('skip-override')] = true
+        emptyPlugin[Symbol.for('fastify.display-name')] = '@fastify/otel'
+        message.fastify.register(emptyPlugin)
       }
       dc.subscribe('fastify.initialization', this._handleInitialization)
     }
