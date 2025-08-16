@@ -71,20 +71,26 @@ app.register((instance, opts, done) => {
 }, { prefix: '/nested' })
 ```
 
-### Automatic plugin registration
+### Registration using OpenTelemetry Node SDK
 
-The plugin can be automatically registered with `registerOnInitialization` option set to `true`.
-In this case, it is necessary to await fastify instance.
+The plugin can be automatically registered using Node SDK, with `registerOnInitialization` option set to `true`.
 
 ```js
 // ... in your OTEL setup
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
-  registerOnInitialization: true,
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import FastifyOtelInstrumentation from "@fastify/otel";
+
+const sdk = new NodeSDK({
+  resource: ...,
+  traceExporter: ...,
+  instrumentations: [
+    ...others,
+    new FastifyOtelInstrumentation({ registerOnInitialization: true })
+  ],
 });
 
-// ... in your Fastify definition
-const Fastify = require('fastify');
-const app = await fastify();
+sdk.start();
+
 ```
 
 > **Notes**:
