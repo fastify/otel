@@ -181,7 +181,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             const handlerLike = routeOptions[hook]
 
             if (typeof handlerLike === 'function') {
-              routeOptions[hook] = handlerWrapper(handlerLike, {
+              routeOptions[hook] = handlerWrapper(handlerLike, hook, {
                 [ATTR_SERVICE_NAME]:
                   instance[kInstrumentation].servername,
                 [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route -> ${hook}`,
@@ -197,7 +197,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
               for (const handler of handlerLike) {
                 wrappedHandlers.push(
-                  handlerWrapper(handler, {
+                  handlerWrapper(handler, hook, {
                     [ATTR_SERVICE_NAME]:
                       instance[kInstrumentation].servername,
                     [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route -> ${hook}`,
@@ -234,7 +234,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           routeOptions.onError = onErrorHook
         }
 
-        routeOptions.handler = handlerWrapper(routeOptions.handler, {
+        routeOptions.handler = handlerWrapper(routeOptions.handler, 'handler', {
           [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
           [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route-handler`,
           [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.HANDLER,
@@ -374,7 +374,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           return addHookOriginal.call(
             this,
             name,
-            handlerWrapper(hook, {
+            handlerWrapper(hook, name, {
               [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - ${name}`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
@@ -392,7 +392,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       function setNotFoundHandlerPatched (hooks, handler) {
         const setNotFoundHandlerOriginal = this[kSetNotFoundOriginal]
         if (typeof hooks === 'function') {
-          handler = handlerWrapper(hooks, {
+          handler = handlerWrapper(hooks, 'notFoundHandler', {
             [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
             [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
             [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
@@ -404,7 +404,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           setNotFoundHandlerOriginal.call(this, handler)
         } else {
           if (hooks.preValidation != null) {
-            hooks.preValidation = handlerWrapper(hooks.preValidation, {
+            hooks.preValidation = handlerWrapper(hooks.preValidation, 'notFoundHandler - preValidation', {
               [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preValidation`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
@@ -416,7 +416,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           }
 
           if (hooks.preHandler != null) {
-            hooks.preHandler = handlerWrapper(hooks.preHandler, {
+            hooks.preHandler = handlerWrapper(hooks.preHandler, 'notFoundHandler - preHandler', {
               [ATTR_SERVICE_NAME]:
                 instance[kInstrumentation].servername,
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preHandler`,
@@ -428,7 +428,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             })
           }
 
-          handler = handlerWrapper(handler, {
+          handler = handlerWrapper(handler, 'notFoundHandler', {
             [ATTR_SERVICE_NAME]: instance[kInstrumentation].servername,
             [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler`,
             [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
@@ -441,7 +441,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
       }
 
-      function handlerWrapper (handler, spanAttributes = {}) {
+      function handlerWrapper (handler, hookName, spanAttributes = {}) {
         return function handlerWrapped (...args) {
           /** @type {FastifyOtelInstrumentation} */
           const instrumentation = this[kInstrumentation]
@@ -453,7 +453,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
           const ctx = request[kRequestContext] ?? context.active()
           const span = instrumentation.tracer.startSpan(
-            `handler - ${
+            `${hookName} - ${
               handler.name?.length > 0
                 ? handler.name
                 : this.pluginName /* c8 ignore next */ ??
