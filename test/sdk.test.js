@@ -59,7 +59,6 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
       'hook.callback.name': 'anonymous',
       'hook.name': 'fastify - route-handler',
       'http.route': '/qq',
-      'service.name': 'fastify',
     })
     assert.deepStrictEqual(spans[1].name, 'request')
     assert.deepStrictEqual(spans[1].attributes, {
@@ -67,7 +66,6 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
       'http.request.method': 'GET',
       'http.response.status_code': 200,
       'http.route': '/qq',
-      'service.name': 'fastify',
     })
   })
 
@@ -102,7 +100,6 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
       'hook.callback.name': 'anonymous',
       'hook.name': 'fastify -> @fastify/otel - route-handler',
       'http.route': '/qq',
-      'service.name': 'fastify',
     })
     assert.deepStrictEqual(spans[1].name, 'request')
     assert.deepStrictEqual(spans[1].attributes, {
@@ -110,7 +107,6 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
       'http.request.method': 'GET',
       'http.response.status_code': 200,
       'http.route': '/qq',
-      'service.name': 'fastify',
     })
   })
 })
