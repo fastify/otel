@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.10.0](https://github.com/fastify/otel/compare/v0.9.4...v0.10.0) (2025-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove requirement to await fastify for auto instrumentation (#88)
+
+### Features
+
+* prefix span name with hook name ([#87](https://github.com/fastify/otel/issues/87)) ([a7cd130](https://github.com/fastify/otel/commit/a7cd1306c25fd23848284fa4904ea6abea682585))
+* remove requirement to await fastify for auto instrumentation ([#88](https://github.com/fastify/otel/issues/88)) ([4a6ce36](https://github.com/fastify/otel/commit/4a6ce3662ecb5bdd8e2ff6c3e6d934edfacab80f))
+* update to @opentelemetry/instrumentation 0.205.0 ([#92](https://github.com/fastify/otel/issues/92)) ([22b06d6](https://github.com/fastify/otel/commit/22b06d6ec6ee8588b5f81ffef0ab118f9c2c1925))
+
 ### [0.9.4](https://github.com/fastify/otel/compare/v0.9.3...v0.9.4) (2025-08-12)
 
 
