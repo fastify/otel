@@ -5,7 +5,6 @@ import type { HTTPMethods } from 'fastify'
 
 export interface FastifyOtelOptions {}
 export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
-  servername?: string
   registerOnInitialization?: boolean
   ignorePaths?: string | ((routeOpts: { url: string, method: HTTPMethods }) => boolean);
   requestHook?: (span: import('@opentelemetry/api').Span, request: import('fastify').FastifyRequest) => void

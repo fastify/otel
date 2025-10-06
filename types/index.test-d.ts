@@ -9,7 +9,6 @@ import { FastifyOtelInstrumentationOpts } from './types'
 expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
 expectAssignable<InstrumentationBase>(new FastifyInstrumentation())
 expectAssignable<InstrumentationConfig>({
-  servername: 'server',
   enabled: true,
   requestHook (span, request) {
     expectAssignable<Span>(span)
