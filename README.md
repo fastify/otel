@@ -214,7 +214,7 @@ const otel = new FastifyOtelInstrumentation({
     span.setAttribute('user.id', request.headers['x-user-id'] ?? 'anonymous')
 
     // optional: give the span a cleaner name
-    span.updateName(`${request.method} ${request.routerPath}`)
+    span.updateName(`${request.method} ${request.routeOptions.url}`)
   }
 })
 ```
