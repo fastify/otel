@@ -66,6 +66,7 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
       'http.request.method': 'GET',
       'http.response.status_code': 200,
       'http.route': '/qq',
+      'url.path': '/qq',
     })
   })
 
@@ -107,6 +108,7 @@ describe('FastifyOtelInstrumentation with opentelemetry.NodeSDK', () => {
       'http.request.method': 'GET',
       'http.response.status_code': 200,
       'http.route': '/qq',
+      'url.path': '/qq',
     })
   })
 })
