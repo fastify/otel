@@ -210,6 +210,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -275,6 +276,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -321,6 +323,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -331,6 +334,103 @@ describe('FastifyInstrumentation', () => {
         'fastify.type': 'request-handler',
         'http.route': '/',
         'hook.callback.name': 'helloworld'
+      })
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should set http.route to route pattern for parameterized routes', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/users/:userId', async function getUser (request, reply) {
+        return { userId: request.params.userId }
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/users/123`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [end, start] = spans
+
+      assert.equal(spans.length, 2)
+      assert.equal(start.name, 'request')
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/users/:userId',
+        'url.path': '/users/123',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+
+      assert.equal(end.name, 'handler - getUser')
+      assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/users/:userId',
+        'hook.callback.name': 'getUser'
+      })
+      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.deepStrictEqual(await response.json(), { userId: '123' })
+    })
+
+    test('should handle route parameters in prefixed plugins', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      await app.register(
+        async function plugin (app, opts) {
+          app.get('/foo/:id', async function hello (request, reply) {
+            return 'hello world'
+          })
+        },
+        { prefix: '/test' }
+      )
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/test/foo/123`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      const [end, start] = spans
+
+      assert.equal(spans.length, 2)
+      assert.equal(start.name, 'request')
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/test/foo/:id',
+        'url.path': '/test/foo/123',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+
+      assert.equal(end.name, 'handler - hello')
+      assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'plugin - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/test/foo/:id',
+        'hook.callback.name': 'hello'
       })
       assert.equal(end.parentSpanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
@@ -381,6 +481,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -463,6 +564,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -523,6 +625,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 500
       })
@@ -566,7 +669,7 @@ describe('FastifyInstrumentation', () => {
       assert.equal(spans.length, 1)
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
-        'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'POST',
         'http.response.status_code': 404
       })
@@ -605,7 +708,7 @@ describe('FastifyInstrumentation', () => {
       assert.equal(spans.length, 2)
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
-        'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'POST',
         'http.response.status_code': 404
       })
@@ -673,7 +776,7 @@ describe('FastifyInstrumentation', () => {
       assert.equal(spans.length, 4)
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
-        'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'POST',
         'http.response.status_code': 404
       })
@@ -755,7 +858,7 @@ describe('FastifyInstrumentation', () => {
       assert.equal(spans.length, 4)
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
-        'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'POST',
         'http.response.status_code': 404
       })
@@ -817,6 +920,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })
@@ -867,6 +971,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 500
       })
@@ -924,6 +1029,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 500
       })
@@ -992,6 +1098,7 @@ describe('FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 500
       })
@@ -1120,6 +1227,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
+          'url.path': '/',
           'http.request.method': 'GET',
           'http.response.status_code': 200
         })
@@ -1164,6 +1272,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
+          'url.path': '/',
           'http.request.method': 'GET',
           'http.response.status_code': 200
         })
@@ -1228,6 +1337,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
+          'url.path': '/',
           'http.request.method': 'GET',
           'http.response.status_code': 200
         })
@@ -1291,6 +1401,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
+          'url.path': '/',
           'http.request.method': 'GET',
           'http.response.status_code': 500
         })
@@ -1364,6 +1475,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(end.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
+          'url.path': '/',
           'http.request.method': 'GET',
           'http.response.status_code': 200
         })
@@ -1381,6 +1493,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(end2.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/nested2',
+          'url.path': '/nested2',
           'http.request.method': 'GET',
           'http.response.status_code': 500
         })
@@ -1432,6 +1545,7 @@ describe('FastifyInstrumentation', () => {
         assert.deepStrictEqual(start.attributes, {
           'fastify.root': '@fastify/otel',
           'http.route': '/',
+          'url.path': '/',
           'http.request.method': 'GET',
           'http.response.status_code': 500
         })

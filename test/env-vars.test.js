@@ -83,6 +83,7 @@ describe('Environment variable aware FastifyInstrumentation', () => {
       assert.deepStrictEqual(start.attributes, {
         'fastify.root': '@fastify/otel',
         'http.route': '/',
+        'url.path': '/',
         'http.request.method': 'GET',
         'http.response.status_code': 200
       })

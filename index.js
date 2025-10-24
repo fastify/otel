@@ -5,7 +5,8 @@ const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
   ATTR_HTTP_ROUTE,
   ATTR_HTTP_RESPONSE_STATUS_CODE,
-  ATTR_HTTP_REQUEST_METHOD
+  ATTR_HTTP_REQUEST_METHOD,
+  ATTR_URL_PATH
 } = require('@opentelemetry/semantic-conventions')
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
 
@@ -271,13 +272,19 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           rpcMetadata.route = request.routeOptions.url
         }
 
+        const attributes = {
+          [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
+          [ATTR_HTTP_REQUEST_METHOD]: request.method,
+          [ATTR_URL_PATH]: request.url
+        }
+
+        if (request.routeOptions.url != null) {
+          attributes[ATTR_HTTP_ROUTE] = request.routeOptions.url
+        }
+
         /** @type {import('@opentelemetry/api').Span} */
         const span = this[kInstrumentation].tracer.startSpan('request', {
-          attributes: {
-            [ATTRIBUTE_NAMES.ROOT]: '@fastify/otel',
-            [ATTR_HTTP_ROUTE]: request.url,
-            [ATTR_HTTP_REQUEST_METHOD]: request.method
-          }
+          attributes
         }, ctx)
 
         try {
