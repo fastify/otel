@@ -51,7 +51,7 @@
     "@opentelemetry/instrumentation-http": "^0.207.0",
     "@opentelemetry/propagator-jaeger": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
-    "@opentelemetry/sdk-trace-node": "^1.29.0",
+    "@opentelemetry/sdk-trace-node": "^2.2.0",
     "@types/node": "^24.0.8",
     "c8": "^10.1.2",
     "cross-env": "^10.0.0",
