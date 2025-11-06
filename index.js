@@ -438,10 +438,24 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           const instrumentation = this[kInstrumentation]
           const [request] = args
 
-          if (instrumentation.isEnabled() === false) {
+          if (instrumentation.isEnabled() === false || request.routeOptions.config?.otel === false) {
+            instrumentation.logger.debug(
+              `Ignoring route instrumentation ${request.routeOptions.method} ${request.routeOptions.url} because it is disabled`
+            )
             return handler.call(this, ...args)
           }
 
+          if (instrumentation[kIgnorePaths]?.({
+            url: request.url,
+            method: request.method,
+          }) === true) {
+            instrumentation.logger.debug(
+              `Ignoring route instrumentation ${request.routeOptions.method} ${request.routeOptions.url} because it matches the ignore path`
+            )
+            return handler.call(this, ...args)
+          }
+
+          /* c8 ignore next */
           const ctx = request[kRequestContext] ?? context.active()
           const span = instrumentation.tracer.startSpan(
             `${hookName} - ${
