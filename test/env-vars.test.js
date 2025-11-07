@@ -34,10 +34,11 @@ describe('Environment variable aware FastifyInstrumentation', () => {
   const instrumentation = new FastifyInstrumentation()
   const contextManager = new AsyncHooksContextManager()
   const memoryExporter = new InMemorySpanExporter()
-  const provider = new NodeTracerProvider()
   const spanProcessor = new SimpleSpanProcessor(memoryExporter)
+  const provider = new NodeTracerProvider({
+    spanProcessors: [spanProcessor]
+  })
 
-  provider.addSpanProcessor(spanProcessor)
   context.setGlobalContextManager(contextManager)
   httpInstrumentation.setTracerProvider(provider)
   instrumentation.setTracerProvider(provider)
@@ -75,7 +76,7 @@ describe('Environment variable aware FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
