@@ -30,6 +30,8 @@ const {
 
 const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http')
 
+const fp = require('fastify-plugin')
+
 const FastifyInstrumentation = require('..')
 
 describe('FastifyInstrumentation', () => {
@@ -67,10 +69,123 @@ describe('FastifyInstrumentation', () => {
       const plugin = instrumentation.plugin()
 
       await app.register(plugin)
+      app.register(fp(async function (fastify) {
+        fastify.addHook('onRequest', (_request, _reply, done) => done())
+      }))
 
       app.get('/', async (request, reply) => 'hello world')
 
       instrumentation.disable()
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/'
+      })
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      assert.ok(spans == null)
+      assert.equal(response.statusCode, 200)
+      assert.equal(response.body, 'hello world')
+    })
+
+    test('should not create spans if disabled (route config)', async t => {
+      before(() => {
+        contextManager.enable()
+      })
+
+      after(() => {
+        contextManager.disable()
+        spanProcessor.forceFlush()
+        memoryExporter.reset()
+        instrumentation.disable()
+        httpInstrumentation.disable()
+      })
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+      app.register(fp(async function (fastify) {
+        fastify.addHook('onRequest', (_request, _reply, done) => done())
+      }))
+
+      app.get('/', { config: { otel: false } }, async (request, reply) => 'hello world')
+
+      instrumentation.disable()
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/'
+      })
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      assert.ok(spans == null)
+      assert.equal(response.statusCode, 200)
+      assert.equal(response.body, 'hello world')
+    })
+
+    test('should not create spans for hooks if disabled', async t => {
+      before(() => {
+        contextManager.enable()
+      })
+
+      after(() => {
+        contextManager.disable()
+        spanProcessor.forceFlush()
+        memoryExporter.reset()
+        instrumentation.disable()
+        httpInstrumentation.disable()
+      })
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+      app.register(fp(async function (fastify) {
+        fastify.addHook('onRequest', (_request, _reply, done) => done())
+      }))
+      instrumentation.disable()
+
+      app.get('/', { preHandler: (request, reply, done) => { done() } }, async (request, reply) => 'hello world')
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/'
+      })
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+
+      assert.ok(spans == null)
+      assert.equal(response.statusCode, 200)
+      assert.equal(response.body, 'hello world')
+    })
+
+    test('should not create spans for hooks if disabled (route config)', async t => {
+      before(() => {
+        contextManager.enable()
+      })
+
+      after(() => {
+        contextManager.disable()
+        spanProcessor.forceFlush()
+        memoryExporter.reset()
+        instrumentation.disable()
+        httpInstrumentation.disable()
+      })
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', { config: { otel: false }, preHandler: (request, reply, done) => { done() } }, async (request, reply) => 'hello world')
 
       const response = await app.inject({
         method: 'GET',
@@ -134,8 +249,11 @@ describe('FastifyInstrumentation', () => {
       const plugin = instrumentation.plugin()
 
       await app.register(plugin)
+      app.register(fp(async function (fastify) {
+        fastify.addHook('onRequest', (_request, _reply, done) => done())
+      }))
 
-      app.get('/health/up', async (request, reply) => 'hello world')
+      app.get('/health/up', { preHandler: (request, reply, done) => { done() } }, async (request, reply) => 'hello world')
 
       await app.listen()
 
@@ -163,8 +281,11 @@ describe('FastifyInstrumentation', () => {
       const plugin = instrumentation.plugin()
 
       await app.register(plugin)
+      app.register(fp(async function (fastify) {
+        fastify.addHook('onRequest', (_request, _reply, done) => done())
+      }))
 
-      app.get('/health', async (request, reply) => 'hello world')
+      app.get('/health', { onRequest: (request, reply, done) => { done() } }, async (request, reply) => 'hello world')
 
       await app.listen()
 
@@ -892,10 +1013,9 @@ describe('FastifyInstrumentation', () => {
 
       app.addHook('onRoute', (routeOptions) => {
         const { handler } = routeOptions
-        const someCustomHandlerArgumentForAPlugin = {}
 
         routeOptions.handler = function (...args) {
-          return handler.call(this, someCustomHandlerArgumentForAPlugin, ...args)
+          return handler.call(this, ...args)
         }
       })
 
