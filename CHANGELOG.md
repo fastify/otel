@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.13.1](https://github.com/fastify/otel/compare/v0.13.0...v0.13.1) (2025-11-07)
+
+
+### Bug Fixes
+
+* ignore plugin hooks on disabled OTEL routes ([#108](https://github.com/fastify/otel/issues/108)) ([e31b577](https://github.com/fastify/otel/commit/e31b577834cc9ff183f428bcb17ed5f3530b1338))
+
 ## [0.13.0](https://github.com/fastify/otel/compare/v0.12.0...v0.13.0) (2025-10-30)
 
 ## [0.10.0](https://github.com/fastify/otel/compare/v0.9.4...v0.10.0) (2025-10-03)
