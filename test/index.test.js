@@ -84,7 +84,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .find(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.ok(spans == null)
       assert.equal(response.statusCode, 200)
@@ -122,7 +122,7 @@ describe('FastifyInstrumentation', () => {
       })
       const spans = memoryExporter
         .getFinishedSpans()
-        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .find(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.ok(spans == null)
       assert.equal(response.statusCode, 200)
@@ -160,7 +160,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .find(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.ok(spans == null)
       assert.equal(response.statusCode, 200)
@@ -194,7 +194,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .find(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.ok(spans == null)
       assert.equal(response.statusCode, 200)
@@ -265,7 +265,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.equal(spans.length, 0)
       assert.equal(await response.text(), 'hello world')
@@ -297,7 +297,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.equal(spans.length, 0)
       assert.equal(await response.text(), 'hello world')
@@ -322,7 +322,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
@@ -381,12 +381,12 @@ describe('FastifyInstrumentation', () => {
 
       const fastifySpans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
       const [httpSpan] = memoryExporter
         .getFinishedSpans()
         .filter(
           span =>
-            span.instrumentationLibrary.name ===
+            span.instrumentationScope.name ===
             '@opentelemetry/instrumentation-http'
         )
 
@@ -408,9 +408,9 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
-      assert.equal(start.parentSpanId, httpSpan.spanContext().spanId)
-      assert.equal(httpSpan.parentSpanId, span.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
+      assert.equal(start.parentSpanContext.spanId, httpSpan.spanContext().spanId)
+      assert.equal(httpSpan.parentSpanContext.spanId, span.spanContext().spanId)
       assert.equal(start.spanContext().traceId, span.spanContext().traceId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
@@ -436,7 +436,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
@@ -456,7 +456,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
@@ -481,7 +481,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
@@ -502,7 +502,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/users/:userId',
         'hook.callback.name': 'getUser'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
       assert.deepStrictEqual(await response.json(), { userId: '123' })
     })
@@ -532,7 +532,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
@@ -553,7 +553,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/test/foo/:id',
         'hook.callback.name': 'hello'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
@@ -594,7 +594,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [preHandler, onReq2, onReq1, end, start] = spans
 
@@ -635,7 +635,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld',
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
@@ -677,7 +677,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [preValidation, end, start, onReq1] = spans
 
@@ -709,7 +709,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
@@ -738,7 +738,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [preHandler, start] = spans
 
@@ -757,7 +757,7 @@ describe('FastifyInstrumentation', () => {
         'hook.name': 'fastify -> @fastify/otel - preHandler'
       })
       assert.equal(preHandler.status.code, SpanStatusCode.ERROR)
-      assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+      assert.equal(preHandler.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 500)
     })
 
@@ -782,7 +782,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [start] = spans
 
@@ -821,7 +821,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [start, fof] = spans
 
@@ -889,7 +889,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [preHandler, preValidation, start, fof] = spans
 
@@ -918,9 +918,9 @@ describe('FastifyInstrumentation', () => {
         'fastify.type': 'hook',
         'hook.callback.name': 'notFoundHandler'
       })
-      assert.equal(fof.parentSpanId, start.spanContext().spanId)
-      assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
-      assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+      assert.equal(fof.parentSpanContext.spanId, start.spanContext().spanId)
+      assert.equal(preValidation.parentSpanContext.spanId, start.spanContext().spanId)
+      assert.equal(preHandler.parentSpanContext.spanId, start.spanContext().spanId)
     })
 
     test('should create named span (404 - customized with hooks)', async t => {
@@ -971,7 +971,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [preHandler, preValidation, start, fof] = spans
 
@@ -1000,9 +1000,9 @@ describe('FastifyInstrumentation', () => {
         'fastify.type': 'hook',
         'hook.callback.name': 'notFoundHandler'
       })
-      assert.equal(fof.parentSpanId, start.spanContext().spanId)
-      assert.equal(preValidation.parentSpanId, start.spanContext().spanId)
-      assert.equal(preHandler.parentSpanId, start.spanContext().spanId)
+      assert.equal(fof.parentSpanContext.spanId, start.spanContext().spanId)
+      assert.equal(preValidation.parentSpanContext.spanId, start.spanContext().spanId)
+      assert.equal(preHandler.parentSpanContext.spanId, start.spanContext().spanId)
     })
 
     test('should create span when the handler is overriden', async t => {
@@ -1033,7 +1033,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
@@ -1050,7 +1050,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
@@ -1083,7 +1083,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start] = spans
 
@@ -1101,7 +1101,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 500)
       assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
@@ -1141,7 +1141,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start, error] = spans
 
@@ -1165,7 +1165,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 500)
       assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
@@ -1210,7 +1210,7 @@ describe('FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       const [end, start, error2, error] = spans
 
@@ -1240,7 +1240,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
-      assert.equal(end.parentSpanId, start.spanContext().spanId)
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 500)
       assert.deepStrictEqual(await response.json(), {
         statusCode: 500,
@@ -1295,7 +1295,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .find(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .find(span => span.instrumentationScope.name === '@fastify/otel')
 
         assert.ok(spans == null)
         assert.equal(response.statusCode, 200)
@@ -1339,7 +1339,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
         const [end, start] = spans
 
@@ -1384,7 +1384,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
         const [end, start] = spans
 
@@ -1403,7 +1403,7 @@ describe('FastifyInstrumentation', () => {
           'http.route': '/',
           'hook.callback.name': 'helloworld'
         })
-        assert.equal(end.parentSpanId, start.spanContext().spanId)
+        assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
         assert.equal(response.status, 200)
         assert.equal(await response.text(), 'hello world')
       })
@@ -1449,7 +1449,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
         const [preValidation, end, start, onReq1] = spans
 
@@ -1481,7 +1481,7 @@ describe('FastifyInstrumentation', () => {
           'http.route': '/',
           'hook.callback.name': 'helloworld'
         })
-        assert.equal(end.parentSpanId, start.spanContext().spanId)
+        assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
         assert.equal(response.status, 200)
         assert.equal(await response.text(), 'hello world')
       })
@@ -1513,7 +1513,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
         const [start] = spans
 
@@ -1581,7 +1581,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
         const [preValidation, start, end, preHandler2, end2, preValidation2] =
           spans
@@ -1623,7 +1623,7 @@ describe('FastifyInstrumentation', () => {
           'hook.callback.name': 'anonymous'
         })
 
-        assert.equal(start.parentSpanId, end.spanContext().spanId)
+        assert.equal(start.parentSpanContext.spanId, end.spanContext().spanId)
         assert.equal(response.status, 200)
         assert.equal(await response.text(), 'hello world')
         assert.equal(response2.status, 500)
@@ -1657,7 +1657,7 @@ describe('FastifyInstrumentation', () => {
 
         const spans = memoryExporter
           .getFinishedSpans()
-          .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+          .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
         const [start] = spans
 
