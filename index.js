@@ -158,7 +158,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
 
-      instance.addHook('onRoute', function onRouteHook (routeOptions) {
+      instance.addHook('onRoute', function otelWireRoute (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
           instrumentation.logger.debug(
             `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it matches the ignore path`
