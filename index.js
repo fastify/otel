@@ -158,7 +158,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
 
-      instance.addHook('onRoute', function (routeOptions) {
+      instance.addHook('onRoute', function onRouteHook (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
           instrumentation.logger.debug(
             `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it matches the ignore path`
@@ -239,7 +239,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         })
       })
 
-      instance.addHook('onRequest', function (request, _reply, hookDone) {
+      instance.addHook('onRequest', function onRequestHook (request, _reply, hookDone) {
         if (
           this[kInstrumentation].isEnabled() === false ||
           request.routeOptions.config?.otel === false
@@ -302,7 +302,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
 
       // onResponse is the last hook to be executed, only added for 404 handlers
-      instance.addHook('onResponse', function (request, reply, hookDone) {
+      instance.addHook('onResponse', function onResponseHook (request, reply, hookDone) {
         const span = request[kRequestSpan]
 
         if (span != null) {
