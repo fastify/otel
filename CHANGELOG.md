@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.14.0](https://github.com/fastify/otel/compare/v0.13.1...v0.14.0) (2025-11-14)
+
+
+### Features
+
+* upgrade @opentelemetry/sdk-trace-node ([#109](https://github.com/fastify/otel/issues/109)) ([0aada51](https://github.com/fastify/otel/commit/0aada51dce6b33cf4281cf568915379aa79e56a5))
+
 ### [0.13.1](https://github.com/fastify/otel/compare/v0.13.0...v0.13.1) (2025-11-07)
 
 
