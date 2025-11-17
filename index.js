@@ -51,6 +51,7 @@ const kIgnorePaths = Symbol('fastify otel ignore path')
 class FastifyOtelInstrumentation extends InstrumentationBase {
   logger = null
   _requestHook = null
+  _lifecycleHook = null
 
   constructor (config) {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
@@ -58,6 +59,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
     this[kIgnorePaths] = null
     if (typeof config?.requestHook === 'function') {
       this._requestHook = config.requestHook
+    }
+    if (typeof config?.lifecycleHook === 'function') {
+      this._lifecycleHook = config.lifecycleHook
     }
 
     if (config?.ignorePaths != null || process.env.OTEL_FASTIFY_IGNORE_PATHS != null) {
@@ -457,18 +461,29 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
           /* c8 ignore next */
           const ctx = request[kRequestContext] ?? context.active()
+          const handlerName = handler.name?.length > 0
+            ? handler.name
+            : this.pluginName /* c8 ignore next */ ?? ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
+
           const span = instrumentation.tracer.startSpan(
-            `${hookName} - ${
-              handler.name?.length > 0
-                ? handler.name
-                : this.pluginName /* c8 ignore next */ ??
-                  ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
-            }`,
+            `${hookName} - ${handlerName}`,
             {
               attributes: spanAttributes
             },
             ctx
           )
+
+          if (instrumentation._lifecycleHook != null) {
+            try {
+              instrumentation._lifecycleHook(span, {
+                hookName,
+                request,
+                handler: handlerName
+              })
+            } catch (err) {
+              instrumentation.logger.error({ err }, 'lifecycleHook threw')
+            }
+          }
 
           return context.with(
             trace.setSpan(ctx, span),

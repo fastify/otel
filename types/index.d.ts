@@ -5,6 +5,7 @@ import type { FastifyPluginCallback } from 'fastify'
 
 import type {
   FastifyOtelInstrumentationOpts,
+  FastifyOtelLifecycleHookInfo,
   FastifyOtelOptions,
   FastifyOtelRequestContext
 } from './types'
@@ -27,7 +28,7 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
 }
 
 declare namespace exported {
-  export type { FastifyOtelInstrumentationOpts }
+  export type { FastifyOtelInstrumentationOpts, FastifyOtelLifecycleHookInfo }
   export { FastifyOtelInstrumentation }
   export { FastifyOtelInstrumentation as default }
 }

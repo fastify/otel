@@ -273,4 +273,71 @@ describe('Interface', () => {
     assert.equal(res.statusCode, 200)
     assert.equal(res.payload, 'ok')
   })
+
+  test('FastifyInstrumentation#lifecycleHook should be invoked for every hook span', async () => {
+    const app = Fastify()
+
+    const calls = []
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation({
+      lifecycleHook: (span, info) => {
+        calls.push({ hookName: info.hookName, handler: info.handler })
+        span.updateName(`custom:${info.hookName}`)
+        span.setAttribute('hook.handler', info.handler ?? 'unknown')
+        span.addEvent('customized')
+      }
+    })
+    instrumentation.setTracerProvider(provider)
+
+    await app.register(instrumentation.plugin())
+
+    app.get('/', {
+      preHandler: function guard (request, reply, done) {
+        done()
+      }
+    }, function routeHandler () {
+      return 'ok'
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.deepStrictEqual(calls.map(call => call.hookName), ['preHandler', 'handler'])
+    assert.deepStrictEqual(calls.map(call => call.handler), ['guard', 'routeHandler'])
+
+    const hookSpans = exporter.getFinishedSpans().filter(span => span.name.startsWith('custom:'))
+    assert.equal(hookSpans.length, 2)
+    assert.ok(hookSpans.every(span => span.attributes['hook.handler'] != null))
+  })
+
+  test('FastifyInstrumentation#lifecycleHook should not crash when it throws', async () => {
+    const app = Fastify()
+
+    const instrumentation = new FastifyInstrumentation({
+      lifecycleHook: () => {
+        throw new Error('boom')
+      }
+    })
+
+    await app.register(instrumentation.plugin())
+
+    app.get('/', () => 'ok')
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+  })
 })

@@ -13,6 +13,12 @@ expectAssignable<InstrumentationConfig>({
   requestHook (span, request) {
     expectAssignable<Span>(span)
     expectAssignable<FastifyRequest>(request)
+  },
+  lifecycleHook (span, info) {
+    expectAssignable<Span>(span)
+    expectAssignable<string>(info.hookName)
+    expectAssignable<FastifyRequest>(info.request)
+    expectAssignable<string | undefined>(info.handler)
   }
 } as FastifyOtelInstrumentationOpts)
 expectAssignable<InstrumentationConfig>({} as FastifyOtelInstrumentationOpts)

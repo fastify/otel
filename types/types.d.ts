@@ -8,6 +8,13 @@ export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
   registerOnInitialization?: boolean
   ignorePaths?: string | ((routeOpts: { url: string, method: HTTPMethods }) => boolean);
   requestHook?: (span: import('@opentelemetry/api').Span, request: import('fastify').FastifyRequest) => void
+  lifecycleHook?: (span: import('@opentelemetry/api').Span, info: FastifyOtelLifecycleHookInfo) => void
+}
+
+export interface FastifyOtelLifecycleHookInfo {
+  hookName: string
+  request: import('fastify').FastifyRequest
+  handler?: string
 }
 
 interface FastifyOtelRequestInfo {
