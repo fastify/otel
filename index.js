@@ -481,7 +481,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
                 handler: handlerName
               })
             } catch (err) {
-              instrumentation.logger.error({ err }, 'lifecycleHook threw')
+              instrumentation.logger.error({ err }, 'Execution of lifecycleHook failed')
             }
           }
 
