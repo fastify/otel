@@ -241,6 +241,12 @@ const otel = new FastifyOtelInstrumentation({
 })
 ```
 
+#### `FastifyOtelInstrumentationOptions#recordExceptions: boolean`
+
+Control whether the instrumentation automatically calls `span.recordException` when a handler or hook throws.
+Defaults to `true`, recording every exception. Set it to `false` if you prefer to record only the
+exceptions that you consider actionable (for example to avoid noisy `4xx` entries in Datadog Error Tracking).
+
 ## License
 
 Licensed under [MIT](./LICENSE).

@@ -49,6 +49,12 @@ describe('Interface', () => {
     assert.doesNotThrow(() => new FastifyInstrumentation({ ignorePaths: '/foo' }))
   })
 
+  test('FastifyOtelInstrumentationOpts#recordExceptions - should be a boolean when provided', async t => {
+    assert.throws(() => new FastifyInstrumentation({ recordExceptions: 'nope' }), /boolean/)
+    assert.doesNotThrow(() => new FastifyInstrumentation({ recordExceptions: true }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ recordExceptions: false }))
+  })
+
   test('NamedFastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
     const app = Fastify()
     const instrumentation = new FastifyOtelInstrumentation()
@@ -339,5 +345,82 @@ describe('Interface', () => {
 
     assert.equal(res.statusCode, 200)
     assert.equal(res.payload, 'ok')
+  })
+
+  test('FastifyInstrumentationOptions#recordExceptions defaults to true', async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation()
+    instrumentation.setTracerProvider(provider)
+
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+    await app.register(instrumentation.plugin())
+
+    app.get('/', async function badRequest () {
+      const error = new Error('book not found')
+      error.statusCode = 404
+      throw error
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 404)
+
+    const spans = exporter.getFinishedSpans()
+    const handlerSpan = spans.find((span) => span.name.startsWith('handler'))
+
+    assert.ok(handlerSpan)
+    assert.equal(handlerSpan.events.length, 1)
+    assert.equal(handlerSpan.events[0].name, 'exception')
+
+    await app.close()
+    instrumentation.disable()
+  })
+
+  test('FastifyInstrumentationOptions#recordExceptions can be disabled', async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation({
+      recordExceptions: false
+    })
+    instrumentation.setTracerProvider(provider)
+
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+    await app.register(instrumentation.plugin())
+
+    app.get('/', async function badRequest () {
+      const error = new Error('book not found')
+      error.statusCode = 404
+      throw error
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 404)
+
+    const spans = exporter.getFinishedSpans()
+    const handlerSpan = spans.find((span) => span.name.startsWith('handler'))
+
+    assert.ok(handlerSpan)
+    assert.equal(handlerSpan.events.length, 0)
+
+    await app.close()
+    instrumentation.disable()
   })
 })

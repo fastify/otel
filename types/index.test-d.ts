@@ -19,7 +19,8 @@ expectAssignable<InstrumentationConfig>({
     expectAssignable<string>(info.hookName)
     expectAssignable<FastifyRequest>(info.request)
     expectAssignable<string | undefined>(info.handler)
-  }
+  },
+  recordExceptions: false
 } as FastifyOtelInstrumentationOpts)
 expectAssignable<InstrumentationConfig>({} as FastifyOtelInstrumentationOpts)
 
