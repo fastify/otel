@@ -47,6 +47,7 @@ const kRequestContext = Symbol('fastify otel request context')
 const kAddHookOriginal = Symbol('fastify otel addhook original')
 const kSetNotFoundOriginal = Symbol('fastify otel setnotfound original')
 const kIgnorePaths = Symbol('fastify otel ignore path')
+const kRecordExceptions = Symbol('fastify otel record exceptions')
 
 class FastifyOtelInstrumentation extends InstrumentationBase {
   logger = null
@@ -57,6 +58,15 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
     super(PACKAGE_NAME, PACKAGE_VERSION, config)
     this.logger = diag.createComponentLogger({ namespace: PACKAGE_NAME })
     this[kIgnorePaths] = null
+    this[kRecordExceptions] = true
+
+    if (config?.recordExceptions != null) {
+      if (typeof config.recordExceptions !== 'boolean') {
+        throw new TypeError('recordExceptions must be a boolean')
+      }
+
+      this[kRecordExceptions] = config.recordExceptions
+    }
     if (typeof config?.requestHook === 'function') {
       this._requestHook = config.requestHook
     }
@@ -362,7 +372,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             code: SpanStatusCode.ERROR,
             message: error.message
           })
-          span.recordException(error)
+          if (instrumentation[kRecordExceptions] !== false) {
+            span.recordException(error)
+          }
         }
 
         hookDone()
@@ -502,7 +514,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
                         code: SpanStatusCode.ERROR,
                         message: error.message
                       })
-                      span.recordException(error)
+                      if (instrumentation[kRecordExceptions] !== false) {
+                        span.recordException(error)
+                      }
                       span.end()
                       return Promise.reject(error)
                     }
@@ -516,7 +530,9 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
                   code: SpanStatusCode.ERROR,
                   message: error.message
                 })
-                span.recordException(error)
+                if (instrumentation[kRecordExceptions] !== false) {
+                  span.recordException(error)
+                }
                 span.end()
                 throw error
               }
