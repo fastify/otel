@@ -219,6 +219,28 @@ const otel = new FastifyOtelInstrumentation({
 })
 ```
 
+#### `FastifyOtelInstrumentationOptions#lifecycleHook: function`
+
+A **synchronous** callback that runs whenever a span is created for a Fastify lifecycle hook (route hooks, instance hooks, not-found handlers, and route handlers).
+* **span** – the hook span that was just created
+* **info.hookName** – Fastify lifecycle stage (e.g., `onRequest`, `preHandler`, `handler`)
+* **info.handler** – the resolved handler or plugin name when available
+* **info.request** – the current `FastifyRequest`
+
+Use it to rename hook spans or annotate them with framework-specific metadata (for example, tRPC procedure names) without registering additional Fastify hooks.
+
+```js
+const otel = new FastifyOtelInstrumentation({
+  lifecycleHook: (span, info) => {
+    if (info.hookName === 'handler' && info.request.headers['x-trpc-op'] != null) {
+      span.updateName(`tRPC handler - ${info.request.headers['x-trpc-op']}`)
+    }
+
+    span.setAttribute('hook.handler.name', info.handler ?? 'anonymous')
+  }
+})
+```
+
 ## License
 
 Licensed under [MIT](./LICENSE).
