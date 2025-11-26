@@ -172,7 +172,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
 
-      instance.addHook('onRoute', function (routeOptions) {
+      instance.addHook('onRoute', function otelWireRoute (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
           instrumentation.logger.debug(
             `Ignoring route instrumentation ${routeOptions.method} ${routeOptions.url} because it matches the ignore path`
@@ -227,19 +227,19 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         // We always want to add the onSend hook to the route to be executed last
         if (routeOptions.onSend != null) {
           routeOptions.onSend = Array.isArray(routeOptions.onSend)
-            ? [...routeOptions.onSend, onSendHook]
-            : [routeOptions.onSend, onSendHook]
+            ? [...routeOptions.onSend, finalizeResponseSpanHook]
+            : [routeOptions.onSend, finalizeResponseSpanHook]
         } else {
-          routeOptions.onSend = onSendHook
+          routeOptions.onSend = finalizeResponseSpanHook
         }
 
         // We always want to add the onError hook to the route to be executed last
         if (routeOptions.onError != null) {
           routeOptions.onError = Array.isArray(routeOptions.onError)
-            ? [...routeOptions.onError, onErrorHook]
-            : [routeOptions.onError, onErrorHook]
+            ? [...routeOptions.onError, recordErrorInSpanHook]
+            : [routeOptions.onError, recordErrorInSpanHook]
         } else {
-          routeOptions.onError = onErrorHook
+          routeOptions.onError = recordErrorInSpanHook
         }
 
         routeOptions.handler = handlerWrapper(routeOptions.handler, 'handler', {
@@ -253,7 +253,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         })
       })
 
-      instance.addHook('onRequest', function (request, _reply, hookDone) {
+      instance.addHook('onRequest', function startRequestSpanHook (request, _reply, hookDone) {
         if (
           this[kInstrumentation].isEnabled() === false ||
           request.routeOptions.config?.otel === false
@@ -316,7 +316,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
 
       // onResponse is the last hook to be executed, only added for 404 handlers
-      instance.addHook('onResponse', function (request, reply, hookDone) {
+      instance.addHook('onResponse', function finalizeNotFoundSpanHook (request, reply, hookDone) {
         const span = request[kRequestSpan]
 
         if (span != null) {
@@ -340,7 +340,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
       done()
 
-      function onSendHook (request, reply, payload, hookDone) {
+      function finalizeResponseSpanHook (request, reply, payload, hookDone) {
         /** @type {import('@opentelemetry/api').Span} */
         const span = request[kRequestSpan]
 
@@ -363,7 +363,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         hookDone(null, payload)
       }
 
-      function onErrorHook (request, reply, error, hookDone) {
+      function recordErrorInSpanHook (request, reply, error, hookDone) {
         /** @type {Span} */
         const span = request[kRequestSpan]
 
