@@ -336,6 +336,8 @@ describe('FastifyInstrumentation', () => {
         'http.response.status_code': 200
       })
 
+      assert.equal(start.status.code, SpanStatusCode.UNSET)
+
       assert.equal(end.name, 'handler - fastify -> @fastify/otel')
       assert.deepStrictEqual(end.attributes, {
         'hook.name': 'fastify -> @fastify/otel - route-handler',
@@ -757,6 +759,7 @@ describe('FastifyInstrumentation', () => {
         'hook.name': 'fastify -> @fastify/otel - preHandler'
       })
       assert.equal(preHandler.status.code, SpanStatusCode.ERROR)
+      assert.equal(start.status.code, SpanStatusCode.ERROR)
       assert.equal(preHandler.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 500)
     })
@@ -794,6 +797,7 @@ describe('FastifyInstrumentation', () => {
         'http.request.method': 'POST',
         'http.response.status_code': 404
       })
+      assert.equal(start.status.code, SpanStatusCode.UNSET)
     })
 
     test('should create named span (404 - customized)', async t => {
@@ -1101,6 +1105,7 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
+      assert.equal(start.status.code, SpanStatusCode.ERROR)
       assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(response.status, 500)
       assert.deepStrictEqual(await response.json(), {

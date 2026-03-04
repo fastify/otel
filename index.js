@@ -320,12 +320,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         const span = request[kRequestSpan]
 
         if (span != null) {
-          span.setStatus({
-            code: SpanStatusCode.OK,
-            message: 'OK'
-          })
           span.setAttributes({
-            [ATTR_HTTP_RESPONSE_STATUS_CODE]: 404
+            [ATTR_HTTP_RESPONSE_STATUS_CODE]: reply.statusCode
           })
           span.end()
         }
@@ -345,11 +341,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         const span = request[kRequestSpan]
 
         if (span != null) {
-          if (reply.statusCode < 500) {
-            span.setStatus({
-              code: SpanStatusCode.OK,
-              message: 'OK'
-            })
+          if (reply.statusCode >= 500) {
+            span.setStatus({ code: SpanStatusCode.ERROR })
           }
 
           span.setAttributes({
