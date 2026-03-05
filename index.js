@@ -441,11 +441,28 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
       }
 
+      // regular handlers are (request, reply), @fastify/websocket handlers are (socket, request)
+      function getRequestFromArgs (args) {
+        for (const arg of args.slice(0, 2)) {
+          if (arg.routeOptions && arg.url && arg.method) {
+            return arg
+          }
+        }
+        return null
+      }
+
       function handlerWrapper (handler, hookName, spanAttributes = {}) {
         return function handlerWrapped (...args) {
           /** @type {FastifyOtelInstrumentation} */
           const instrumentation = this[kInstrumentation]
-          const [request] = args
+
+          const request = getRequestFromArgs(args)
+          if (request === null) {
+            instrumentation.logger.debug(
+              `Ignoring route instrumentation because ${hookName} was called without a Fastify request argument`
+            )
+            return handler.call(this, ...args)
+          }
 
           if (instrumentation.isEnabled() === false || request.routeOptions.config?.otel === false) {
             instrumentation.logger.debug(
