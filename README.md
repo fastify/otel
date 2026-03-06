@@ -71,6 +71,11 @@ app.register((instance, opts, done) => {
 }, { prefix: '/nested' })
 ```
 
+If the main request handler is not of the form `(request, reply)` (for example, `@fastify/websocket`
+handlers take the form `(socket, request)`), the plugin attempts to find the Fastify request object
+in any of the handler's arguments. If no request object can be found, instrumentation is skipped and
+a debug level message is logged.
+
 ### Registration using OpenTelemetry Node SDK
 
 The plugin can be automatically registered using Node SDK, with `registerOnInitialization` option set to `true`.

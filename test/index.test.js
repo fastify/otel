@@ -1059,6 +1059,103 @@ describe('FastifyInstrumentation', () => {
       assert.equal(await response.text(), 'hello world')
     })
 
+    test('should create span when wrapped handler is invoked as (socket, request)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.addHook('onRoute', (routeOptions) => {
+        const { handler } = routeOptions
+
+        routeOptions.handler = function websocketLikeHandler (request, _reply) {
+          const socket = { readyState: 1 }
+          return handler.call(this, socket, request)
+        }
+      })
+
+      app.get('/', async function wsHandler (_socket, request) {
+        assert.equal(request.method, 'GET')
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const [end, start] = spans
+
+      assert.equal(spans.length, 2)
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'url.path': '/',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+      assert.deepStrictEqual(end.attributes, {
+        'hook.name': 'fastify -> @fastify/otel - route-handler',
+        'fastify.type': 'request-handler',
+        'http.route': '/',
+        'hook.callback.name': 'wsHandler'
+      })
+      assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should fallback when wrapped handler is invoked without request argument', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.addHook('onRoute', (routeOptions) => {
+        const { handler } = routeOptions
+
+        routeOptions.handler = function callWithoutRequest (_request, _reply) {
+          return handler.call(this)
+        }
+      })
+
+      app.get('/', async function wsHandlerWithoutRequest () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const [start] = spans
+
+      assert.equal(spans.length, 1)
+      assert.deepStrictEqual(start.attributes, {
+        'fastify.root': '@fastify/otel',
+        'http.route': '/',
+        'url.path': '/',
+        'http.request.method': 'GET',
+        'http.response.status_code': 200
+      })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
     test('should end spans upon error', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
