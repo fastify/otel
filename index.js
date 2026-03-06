@@ -443,8 +443,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
       // regular handlers are (request, reply), @fastify/websocket handlers are (socket, request)
       function getRequestFromArgs (args) {
-        for (const arg of args.slice(0, 2)) {
-          if (arg.routeOptions && arg.url && arg.method) {
+        for (const arg of args) {
+          if (arg?.routeOptions && arg.url && arg.method) {
             return arg
           }
         }
