@@ -3,9 +3,9 @@ name: CI
 on:
   push:
     branches:
-     - main
-     - next
-     - 'v*'
+      - main
+      - next
+      - 'v*'
     paths-ignore:
       - 'docs/**'
       - '*.md'
@@ -16,8 +16,8 @@ on:
 
 # This allows a subsequently queued workflow run to interrupt previous runs
 concurrency:
-    group: "${{ github.workflow }}-${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
-    cancel-in-progress: true
+  group: '${{ github.workflow }}-${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -31,4 +31,4 @@ jobs:
     with:
       lint: true
       license-check: true
-      node-versions: '["18", "20", "22", "24"]'
+      node-versions: '["20", "22", "24"]'
