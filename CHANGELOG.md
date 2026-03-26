@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.18.0](https://github.com/fastify/otel/compare/v0.17.1...v0.18.0) (2026-03-26)
+
+
+### Features
+
+* remove setStatus(OK) calls to comply with OTel spec ([#135](https://github.com/fastify/otel/issues/135)) ([9ff035c](https://github.com/fastify/otel/commit/9ff035c60aa5ec72bee8cbad0837dbbc80ec4e2f))
+
+
+### Bug Fixes
+
+* support fastify/websocket handlers (fastify/otel[#136](https://github.com/fastify/otel/issues/136)) ([#137](https://github.com/fastify/otel/issues/137)) ([cc9c6b5](https://github.com/fastify/otel/commit/cc9c6b5ad8ae5c88da03e6537f8b494d3d506b8d))
+
 ### [0.17.1](https://github.com/fastify/otel/compare/v0.17.0...v0.17.1) (2026-03-03)
 
 ## [0.17.0](https://github.com/fastify/otel/compare/v0.16.0...v0.17.0) (2026-03-03)
