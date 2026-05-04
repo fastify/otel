@@ -1,13 +1,14 @@
-import { expectAssignable } from 'tsd'
+import { expect } from 'tstyche'
 import { InstrumentationBase, InstrumentationConfig } from '@opentelemetry/instrumentation'
 import { fastify as Fastify } from 'fastify'
 
 import { FastifyOtelInstrumentation } from '.'
 import { FastifyOtelInstrumentationOpts } from './types'
 
-expectAssignable<InstrumentationBase>(new FastifyOtelInstrumentation())
-expectAssignable<InstrumentationConfig>({ enabled: true } as FastifyOtelInstrumentationOpts)
-expectAssignable<InstrumentationConfig>({} as FastifyOtelInstrumentationOpts)
+expect(new FastifyOtelInstrumentation()).type.toBeAssignableTo<InstrumentationBase>()
+
+expect({ enabled: true } as FastifyOtelInstrumentationOpts).type.toBeAssignableTo<InstrumentationConfig>()
+expect({} as FastifyOtelInstrumentationOpts).type.toBeAssignableTo<InstrumentationConfig>()
 
 const app = Fastify()
 app.register(new FastifyOtelInstrumentation().plugin())
