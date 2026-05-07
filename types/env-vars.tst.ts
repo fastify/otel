@@ -8,7 +8,7 @@ import { FastifyOtelInstrumentationOpts } from './types'
 
 expect(new FastifyOtelInstrumentation()).type.toBeAssignableTo<InstrumentationBase>()
 expect(new FastifyInstrumentation()).type.toBeAssignableTo<InstrumentationBase>()
-expect({
+const opts: FastifyOtelInstrumentationOpts = {
   enabled: true,
   requestHook (span, request) {
     expect(span).type.toBeAssignableTo<Span>()
@@ -21,7 +21,8 @@ expect({
     expect(info.handler).type.toBeAssignableTo<string | undefined>()
   },
   recordExceptions: false
-} as FastifyOtelInstrumentationOpts).type.toBeAssignableTo<InstrumentationConfig>()
+}
+expect(opts).type.toBeAssignableTo<InstrumentationConfig>()
 expect({} as FastifyOtelInstrumentationOpts).type.toBeAssignableTo<InstrumentationConfig>()
 
 const app = Fastify()
