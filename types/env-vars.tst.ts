@@ -2,8 +2,7 @@ import { expect } from 'tstyche'
 import { InstrumentationBase, InstrumentationConfig } from '@opentelemetry/instrumentation'
 import { fastify as Fastify } from 'fastify'
 
-import { FastifyOtelInstrumentation } from '.'
-import { FastifyOtelInstrumentationOpts } from './types'
+import { FastifyOtelInstrumentation, FastifyOtelInstrumentationOpts } from '.'
 
 expect(new FastifyOtelInstrumentation()).type.toBeAssignableTo<InstrumentationBase>()
 
