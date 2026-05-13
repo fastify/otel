@@ -70,8 +70,5 @@
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.9.0"
-  },
-  "tsd": {
-    "directory": "types"
   }
 }
