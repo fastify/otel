@@ -23,6 +23,7 @@ const {
 } = require('@opentelemetry/sdk-trace-base')
 const {
   context,
+  SpanKind,
   SpanStatusCode,
   trace,
   propagation
@@ -337,6 +338,7 @@ describe('FastifyInstrumentation', () => {
       })
 
       assert.equal(start.status.code, SpanStatusCode.UNSET)
+      assert.equal(start.kind, SpanKind.SERVER)
 
       assert.equal(end.name, 'handler - fastify -> @fastify/otel')
       assert.deepStrictEqual(end.attributes, {
