@@ -1,6 +1,6 @@
 'use strict'
 const dc = require('node:diagnostics_channel')
-const { context, trace, SpanStatusCode, propagation, diag } = require('@opentelemetry/api')
+const { context, trace, SpanKind, SpanStatusCode, propagation, diag } = require('@opentelemetry/api')
 const { getRPCMetadata, RPCType } = require('@opentelemetry/core')
 const {
   ATTR_HTTP_ROUTE,
@@ -298,7 +298,8 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
 
         /** @type {import('@opentelemetry/api').Span} */
         const span = this[kInstrumentation].tracer.startSpan('request', {
-          attributes
+          attributes,
+          kind: SpanKind.SERVER
         }, ctx)
 
         try {
