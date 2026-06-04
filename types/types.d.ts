@@ -3,6 +3,20 @@ import type { InstrumentationConfig } from '@opentelemetry/instrumentation'
 import type { Context, Span, TextMapGetter, TextMapSetter, Tracer } from '@opentelemetry/api'
 import type { HTTPMethods } from 'fastify'
 
+export type FastifyOtelHookName =
+  | 'onRequest'
+  | 'preParsing'
+  | 'preValidation'
+  | 'preHandler'
+  | 'preSerialization'
+  | 'onSend'
+  | 'onResponse'
+  | 'onError'
+
+export interface FastifyOtelRouteConfig {
+  instrumentHooks?: boolean | FastifyOtelHookName[]
+}
+
 export interface FastifyOtelOptions {}
 export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
   registerOnInitialization?: boolean
@@ -10,6 +24,7 @@ export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
   requestHook?: (span: import('@opentelemetry/api').Span, request: import('fastify').FastifyRequest) => void
   lifecycleHook?: (span: import('@opentelemetry/api').Span, info: FastifyOtelLifecycleHookInfo) => void
   recordExceptions?: boolean
+  instrumentHooks?: boolean | FastifyOtelHookName[]
 }
 
 export interface FastifyOtelLifecycleHookInfo {

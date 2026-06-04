@@ -19,7 +19,7 @@ npm i @fastify/otel
 It must be configured before defining routes and other plugins in order to cover the most of your Fastify server.
 
 - It automatically wraps the main request handler
-- Instruments all route hooks (defined at instance and route definition level)
+- Instruments all route hooks (defined at instance and route definition level) by default; use `instrumentHooks` globally or per-route to control auto-instrumented hook spans
   - `onRequest`
   - `preParsing`
   - `preValidation`
@@ -58,6 +58,8 @@ app.get('/', () => 'hello world')
 app.addHook('onError', () => /* do something */)
 // Manually skip telemetry for a specific route
 app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
+// Keep request and handler spans but skip lifecycle hook spans on a route
+app.get('/api', { config: { otel: { instrumentHooks: false } } }, () => 'ok')
 
 // you can also scope your instrumentation to only be enabled on a sub context
 // of your application
@@ -224,9 +226,31 @@ const otel = new FastifyOtelInstrumentation({
 })
 ```
 
+#### `FastifyOtelInstrumentationOptions#instrumentHooks: boolean | string[]`
+
+Control which Fastify lifecycle hooks receive child spans. Defaults to instrumenting all hooks listed in Usage.
+
+* `true` (default) – instrument all lifecycle hooks (`onRequest`, `preParsing`, `preValidation`, `preHandler`, `preSerialization`, `onSend`, `onResponse`, `onError`)
+* `false` – no lifecycle hook child spans (the root `request` span and route `handler` span are still created)
+* `string[]` – allowlist of hook names to instrument (for example `['preHandler']`)
+
+Per-route override via `config.otel`:
+
+* `otel: false` – disable all OpenTelemetry spans for the route (unchanged)
+* `otel: { instrumentHooks: false }` – request and handler spans only
+* `otel: { instrumentHooks: true }` – all lifecycle hooks on the route (overrides a global `false`)
+* `otel: { instrumentHooks: ['preHandler'] }` – allowlist for the route (overrides global settings)
+
+Precedence: `otel: false`, then route `otel.instrumentHooks` when set, otherwise the global `instrumentHooks` option.
+
+```js
+const otel = new FastifyOtelInstrumentation({ instrumentHooks: false })
+app.get('/debug', { config: { otel: { instrumentHooks: ['onRequest'] } } }, handler)
+```
+
 #### `FastifyOtelInstrumentationOptions#lifecycleHook: function`
 
-A **synchronous** callback that runs whenever a span is created for a Fastify lifecycle hook (route hooks, instance hooks, not-found handlers, and route handlers).
+A **synchronous** callback that runs whenever a span is created for an instrumented Fastify lifecycle hook (route hooks, instance hooks, not-found handlers, and route handlers). It is not invoked when `instrumentHooks` skips a hook.
 * **span** – the hook span that was just created
 * **info.hookName** – Fastify lifecycle stage (e.g., `onRequest`, `preHandler`, `handler`)
 * **info.handler** – the resolved handler or plugin name when available
