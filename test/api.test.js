@@ -55,6 +55,15 @@ describe('Interface', () => {
     assert.doesNotThrow(() => new FastifyInstrumentation({ recordExceptions: false }))
   })
 
+  test('FastifyOtelInstrumentationOpts#instrumentHooks - should be a boolean or array of hook names', async t => {
+    assert.throws(() => new FastifyInstrumentation({ instrumentHooks: 'nope' }), /boolean or an array/)
+    assert.throws(() => new FastifyInstrumentation({ instrumentHooks: [] }), /boolean or an array/)
+    assert.throws(() => new FastifyInstrumentation({ instrumentHooks: ['notAHook'] }), /boolean or an array/)
+    assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: false }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: true }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: ['preHandler'] }))
+  })
+
   test('NamedFastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
     const app = Fastify()
     const instrumentation = new FastifyOtelInstrumentation()
@@ -214,6 +223,31 @@ describe('Interface', () => {
     })
     assert.equal(res3.statusCode, 200)
     assert.equal(res3.payload, 'world')
+  })
+
+  test('FastifyRequest#opentelemetry() stays enabled when only instrumentHooks is disabled for the route', async () => {
+    const app = Fastify()
+    const instrumentation = new FastifyInstrumentation()
+    const plugin = instrumentation.plugin()
+
+    await app.register(plugin)
+
+    app.get('/hooks-off', { config: { otel: { instrumentHooks: false } } }, (request) => {
+      const otel = request.opentelemetry()
+
+      assert.equal(otel.enabled, true)
+      assert.equal(typeof otel.span.spanContext().spanId, 'string')
+      assert.equal(typeof otel.context, 'object')
+
+      return 'ok'
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/hooks-off'
+    })
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
   })
 
   test('FastifyInstrumentation#requestHook should be invoked and can mutate span', async () => {
