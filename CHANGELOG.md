@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.19.0](https://github.com/fastify/otel/compare/v0.18.1...v0.19.0) (2026-06-12)
+
+
+### Features
+
+* support instrumentHooks to control auto-instrumentation of hooks ([f43099d](https://github.com/fastify/otel/commit/f43099dd918303f91a45c0ab16fcd05a47ab9719))
+
+
+### Bug Fixes
+
+* mark request spans as server spans ([#156](https://github.com/fastify/otel/issues/156)) ([89d4bb4](https://github.com/fastify/otel/commit/89d4bb489662bc01152c4c85eb02ca5b88d28d93)), closes [#152](https://github.com/fastify/otel/issues/152)
+
 ## [0.18.0](https://github.com/fastify/otel/compare/v0.17.1...v0.18.0) (2026-03-26)
 
 
