@@ -247,9 +247,13 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest('opentelemetry', function openetelemetry () {
         const ctx = this[kRequestContext]
         const span = this[kRequestSpan]
+        const enabled = instrumentation.isEnabled() &&
+          !isRouteOtelDisabled(this.routeOptions.config)
+        const instrumented = span != null && ctx != null
 
         return {
-          enabled: !isRouteOtelDisabled(this.routeOptions.config),
+          enabled,
+          instrumented,
           span,
           tracer: instrumentation.tracer,
           context: ctx,
