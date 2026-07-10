@@ -399,9 +399,16 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
 
         /** @type {import('@opentelemetry/api').Span} */
+        // When an upstream HTTP server instrumentation is active (e.g.
+        // @opentelemetry/instrumentation-http via auto-instrumentations-node),
+        // the incoming request already has a SERVER span and RPC metadata in
+        // the active context. Creating a second SERVER span for the same
+        // request breaks span-kind semantics and makes backends that map
+        // SERVER spans to transactions report the request twice. In that case
+        // the request span is INTERNAL; standalone usage keeps SERVER.
         const span = this[kInstrumentation].tracer.startSpan('request', {
           attributes,
-          kind: SpanKind.SERVER
+          kind: rpcMetadata?.type === RPCType.HTTP ? SpanKind.INTERNAL : SpanKind.SERVER
         }, ctx)
 
         try {

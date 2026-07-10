@@ -338,7 +338,9 @@ describe('FastifyInstrumentation', () => {
       })
 
       assert.equal(start.status.code, SpanStatusCode.UNSET)
-      assert.equal(start.kind, SpanKind.SERVER)
+      // http instrumentation is enabled in this suite, so the request span is
+      // demoted to INTERNAL (the SERVER span belongs to instrumentation-http)
+      assert.equal(start.kind, SpanKind.INTERNAL)
 
       assert.equal(end.name, 'handler - fastify -> @fastify/otel')
       assert.deepStrictEqual(end.attributes, {
@@ -347,6 +349,39 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'anonymous'
       })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should keep SERVER kind when no upstream http instrumentation is active', async t => {
+      // Without @opentelemetry/instrumentation-http there is no RPC metadata
+      // in the active context, so the request span is the root server span.
+      httpInstrumentation.disable()
+
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async (request, reply) => 'hello world')
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const [, start] = spans
+
+      assert.equal(spans.length, 2)
+      assert.equal(start.name, 'request')
+      assert.equal(start.kind, SpanKind.SERVER)
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'hello world')
     })
@@ -412,6 +447,8 @@ describe('FastifyInstrumentation', () => {
         'http.route': '/',
         'hook.callback.name': 'helloworld'
       })
+      assert.equal(start.kind, SpanKind.INTERNAL)
+      assert.equal(httpSpan.kind, SpanKind.SERVER)
       assert.equal(end.parentSpanContext.spanId, start.spanContext().spanId)
       assert.equal(start.parentSpanContext.spanId, httpSpan.spanContext().spanId)
       assert.equal(httpSpan.parentSpanContext.spanId, span.spanContext().spanId)
