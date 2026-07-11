@@ -1262,6 +1262,62 @@ describe('FastifyInstrumentation', () => {
       assert.equal(preHandler.parentSpanContext.spanId, start.spanContext().spanId)
     })
 
+    test('should create named spans for 404 hooks declared as arrays', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.setNotFoundHandler(
+        {
+          preHandler: [
+            function preHandlerOne (request, reply, done) {
+              done()
+            },
+            function preHandlerTwo (request, reply, done) {
+              done()
+            }
+          ],
+          preValidation: [
+            function preValidationOne (request, reply, done) {
+              done()
+            },
+            function preValidationTwo (request, reply, done) {
+              done()
+            }
+          ]
+        },
+        async function notFoundHandler (request, reply) {
+          reply.code(200).send('missing')
+        }
+      )
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/missing'
+      })
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const hookCallbackNames = spans
+        .map(span => span.attributes['hook.callback.name'])
+        .filter(Boolean)
+        .sort()
+
+      assert.equal(response.statusCode, 200)
+      assert.equal(response.body, 'missing')
+      assert.equal(spans.length, 6)
+      assert.deepStrictEqual(hookCallbackNames, [
+        'notFoundHandler',
+        'preHandlerOne',
+        'preHandlerTwo',
+        'preValidationOne',
+        'preValidationTwo'
+      ])
+    })
+
     test('should create span when the handler is overriden', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
