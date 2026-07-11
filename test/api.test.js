@@ -288,6 +288,40 @@ describe('Interface', () => {
     await app.close()
   })
 
+  test('FastifyRequest#opentelemetry() returns an enabled but uninstrumented context when the path is ignored by a function', async () => {
+    const app = Fastify()
+    const instrumentation = new FastifyInstrumentation({
+      ignorePaths: (opts) => opts.url === '/health'
+    })
+    const plugin = instrumentation.plugin()
+    let otel
+
+    await app.register(plugin)
+
+    app.get('/health', (request) => {
+      otel = request.opentelemetry()
+
+      return 'ok'
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/health'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.equal(otel.enabled, true)
+    assert.equal(otel.instrumented, false)
+    assert.equal(otel.span, null)
+    assert.equal(typeof otel.tracer, 'object')
+    assert.equal(otel.context, null)
+    assert.equal(typeof otel.inject, 'function')
+    assert.equal(typeof otel.extract, 'function')
+
+    await app.close()
+  })
+
   test('FastifyRequest#opentelemetry() returns an uninstrumented context when instrumentation is disabled', async () => {
     const app = Fastify()
     const instrumentation = new FastifyInstrumentation()
