@@ -4,10 +4,12 @@ import { InstrumentationBase, type InstrumentationNodeModuleDefinition } from '@
 import type { FastifyPluginCallback } from 'fastify'
 
 import type {
+  FastifyOtelHookName,
   FastifyOtelInstrumentationOpts,
   FastifyOtelLifecycleHookInfo,
   FastifyOtelOptions,
-  FastifyOtelRequestContext
+  FastifyOtelRequestContext,
+  FastifyOtelRouteConfig
 } from './types'
 
 declare module 'fastify' {
@@ -16,8 +18,8 @@ declare module 'fastify' {
   }
 
   interface FastifyContextConfig {
-    /** Set this to `false` to disable OpenTelemetry for the route */
-    otel?: boolean
+    /** Set to `false` to disable OpenTelemetry for the route, or use an object to control hook spans */
+    otel?: boolean | FastifyOtelRouteConfig
   }
 }
 
@@ -28,7 +30,12 @@ declare class FastifyOtelInstrumentation<Config extends FastifyOtelInstrumentati
 }
 
 declare namespace exported {
-  export type { FastifyOtelInstrumentationOpts, FastifyOtelLifecycleHookInfo }
+  export type {
+    FastifyOtelHookName,
+    FastifyOtelInstrumentationOpts,
+    FastifyOtelLifecycleHookInfo,
+    FastifyOtelRouteConfig
+  }
   export { FastifyOtelInstrumentation }
   export { FastifyOtelInstrumentation as default }
 }
