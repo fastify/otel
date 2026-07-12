@@ -31,4 +31,4 @@ jobs:
     with:
       lint: true
       license-check: true
-      node-versions: '["20", "22", "24"]'
+      node-versions: '["20", "22", "24", "26"]'
