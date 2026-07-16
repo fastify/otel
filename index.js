@@ -507,6 +507,14 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
       }
 
+      function wrapNotFoundHookHandler (handlerLike, hookName, getSpanAttributes) {
+        if (Array.isArray(handlerLike)) {
+          return handlerLike.map(handler => handlerWrapper(handler, hookName, getSpanAttributes(handler)))
+        }
+
+        return handlerWrapper(handlerLike, hookName, getSpanAttributes(handlerLike))
+      }
+
       function setNotFoundHandlerPatched (hooks, handler) {
         const setNotFoundHandlerOriginal = this[kSetNotFoundOriginal]
         if (typeof hooks === 'function') {
@@ -526,28 +534,28 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             hooks.preValidation != null &&
             shouldInstrumentLifecycleHook('preValidation', globalHookPolicy)
           ) {
-            hooks.preValidation = handlerWrapper(hooks.preValidation, 'notFoundHandler - preValidation', {
+            hooks.preValidation = wrapNotFoundHookHandler(hooks.preValidation, 'notFoundHandler - preValidation', handler => ({
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preValidation`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hooks.preValidation.name?.length > 0
-                  ? hooks.preValidation.name
+                handler.name?.length > 0
+                  ? handler.name
                   : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
-            })
+            }))
           }
 
           if (
             hooks.preHandler != null &&
             shouldInstrumentLifecycleHook('preHandler', globalHookPolicy)
           ) {
-            hooks.preHandler = handlerWrapper(hooks.preHandler, 'notFoundHandler - preHandler', {
+            hooks.preHandler = wrapNotFoundHookHandler(hooks.preHandler, 'notFoundHandler - preHandler', handler => ({
               [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - not-found-handler - preHandler`,
               [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.INSTANCE,
               [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-                hooks.preHandler.name?.length > 0
-                  ? hooks.preHandler.name
+                handler.name?.length > 0
+                  ? handler.name
                   : ANONYMOUS_FUNCTION_NAME /* c8 ignore next */
-            })
+            }))
           }
 
           handler = handlerWrapper(handler, 'notFoundHandler', {
