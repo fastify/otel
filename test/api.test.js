@@ -89,6 +89,7 @@ describe('Interface', () => {
       const otel = request.opentelemetry()
 
       assert.equal(otel.enabled, true)
+      assert.equal(otel.instrumented, true)
       assert.equal(typeof otel.span.spanContext().spanId, 'string')
       assert.equal(typeof otel.tracer, 'object')
       assert.equal(typeof otel.context, 'object')
@@ -109,7 +110,7 @@ describe('Interface', () => {
     assert.equal(res.payload, 'world')
   })
 
-  test('FastifyRequest#opentelemetry() returns FastifyDisabledOtelRequestContext when disabled for a request', async () => {
+  test('FastifyRequest#opentelemetry() returns an uninstrumented context when disabled for a request', async () => {
     /** @type {import('fastify').FastifyInstance} */
     const app = Fastify()
     const instrumentation = new FastifyInstrumentation()
@@ -121,6 +122,7 @@ describe('Interface', () => {
       const otel = request.opentelemetry()
 
       assert.equal(otel.enabled, false)
+      assert.equal(otel.instrumented, false)
       assert.equal(otel.span, null)
       assert.equal(typeof otel.tracer, 'object')
       assert.equal(otel.context, null)
@@ -138,6 +140,7 @@ describe('Interface', () => {
       const otel = request.opentelemetry()
 
       assert.equal(otel.enabled, true)
+      assert.equal(otel.instrumented, true)
       assert.equal(typeof otel.span.spanContext().spanId, 'string')
       assert.equal(typeof otel.tracer, 'object')
       assert.equal(typeof otel.context, 'object')
@@ -156,6 +159,7 @@ describe('Interface', () => {
 
       assert.equal(request.fakeData, 123)
       assert.equal(otel.enabled, false)
+      assert.equal(otel.instrumented, false)
       assert.equal(otel.span, null)
       assert.equal(typeof otel.tracer, 'object')
       assert.equal(otel.context, null)
@@ -189,6 +193,7 @@ describe('Interface', () => {
         const otel = request.opentelemetry()
 
         assert.equal(otel.enabled, false)
+        assert.equal(otel.instrumented, false)
         assert.equal(otel.span, null)
         assert.equal(typeof otel.tracer, 'object')
         assert.equal(otel.context, null)
@@ -236,6 +241,7 @@ describe('Interface', () => {
       const otel = request.opentelemetry()
 
       assert.equal(otel.enabled, true)
+      assert.equal(otel.instrumented, true)
       assert.equal(typeof otel.span.spanContext().spanId, 'string')
       assert.equal(typeof otel.context, 'object')
 
@@ -248,6 +254,104 @@ describe('Interface', () => {
     })
     assert.equal(res.statusCode, 200)
     assert.equal(res.payload, 'ok')
+  })
+
+  test('FastifyRequest#opentelemetry() returns an enabled but uninstrumented context when the path is ignored', async () => {
+    const app = Fastify()
+    const instrumentation = new FastifyInstrumentation({
+      ignorePaths: '/health'
+    })
+    const plugin = instrumentation.plugin()
+    let otel
+
+    await app.register(plugin)
+
+    app.get('/health', (request) => {
+      otel = request.opentelemetry()
+
+      return 'ok'
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/health'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.equal(otel.enabled, true)
+    assert.equal(otel.instrumented, false)
+    assert.equal(otel.span, null)
+    assert.equal(typeof otel.tracer, 'object')
+    assert.equal(otel.context, null)
+
+    await app.close()
+  })
+
+  test('FastifyRequest#opentelemetry() returns an enabled but uninstrumented context when the path is ignored by a function', async () => {
+    const app = Fastify()
+    const instrumentation = new FastifyInstrumentation({
+      ignorePaths: (opts) => opts.url === '/health'
+    })
+    const plugin = instrumentation.plugin()
+    let otel
+
+    await app.register(plugin)
+
+    app.get('/health', (request) => {
+      otel = request.opentelemetry()
+
+      return 'ok'
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/health'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.equal(otel.enabled, true)
+    assert.equal(otel.instrumented, false)
+    assert.equal(otel.span, null)
+    assert.equal(typeof otel.tracer, 'object')
+    assert.equal(otel.context, null)
+    assert.equal(typeof otel.inject, 'function')
+    assert.equal(typeof otel.extract, 'function')
+
+    await app.close()
+  })
+
+  test('FastifyRequest#opentelemetry() returns an uninstrumented context when instrumentation is disabled', async () => {
+    const app = Fastify()
+    const instrumentation = new FastifyInstrumentation()
+    const plugin = instrumentation.plugin()
+    let otel
+
+    await app.register(plugin)
+
+    app.get('/disabled', (request) => {
+      otel = request.opentelemetry()
+
+      return 'ok'
+    })
+
+    instrumentation.disable()
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/disabled'
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.payload, 'ok')
+    assert.equal(otel.enabled, false)
+    assert.equal(otel.instrumented, false)
+    assert.equal(otel.span, null)
+    assert.equal(typeof otel.tracer, 'object')
+    assert.equal(otel.context, null)
+
+    await app.close()
   })
 
   test('FastifyInstrumentation#requestHook should be invoked and can mutate span', async () => {

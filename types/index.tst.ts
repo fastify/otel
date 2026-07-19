@@ -57,6 +57,7 @@ app.get('/', async function (request, reply) {
     (carrier: any, getter?: TextMapGetter) => Context
 >().type.toBeAssignableTo<(carrier: any, getter?: TextMapGetter) => Context>()
   expect(otel.tracer).type.toBeAssignableTo<Tracer>()
+  expect(otel.instrumented).type.toBeAssignableTo<boolean>()
 
   if (otel.enabled) {
     expect(otel.span).type.toBeAssignableTo<Span>()

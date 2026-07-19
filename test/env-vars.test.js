@@ -103,10 +103,15 @@ describe('Environment variable aware FastifyInstrumentation', () => {
 
       const app = Fastify()
       const plugin = instrumentation.plugin()
+      let otel
 
       await app.register(plugin)
 
-      app.get('/health/up', async (request, reply) => 'hello world')
+      app.get('/health/up', async (request, reply) => {
+        otel = request.opentelemetry()
+
+        return 'hello world'
+      })
 
       await app.listen()
 
@@ -121,6 +126,10 @@ describe('Environment variable aware FastifyInstrumentation', () => {
         .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
 
       assert.equal(spans.length, 0)
+      assert.equal(otel.enabled, true)
+      assert.equal(otel.instrumented, false)
+      assert.equal(otel.span, null)
+      assert.equal(otel.context, null)
       assert.equal(await response.text(), 'hello world')
       assert.equal(response.status, 200)
     })

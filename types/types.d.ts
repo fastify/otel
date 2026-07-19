@@ -34,6 +34,7 @@ export interface FastifyOtelLifecycleHookInfo {
 }
 
 interface FastifyOtelRequestInfo {
+  instrumented: boolean,
   tracer: Tracer,
   inject: (carrier: {}, setter?: TextMapSetter) => void;
   extract: (carrier: {}, getter?: TextMapGetter) => Context

@@ -34,6 +34,7 @@ declare namespace exported {
     FastifyOtelHookName,
     FastifyOtelInstrumentationOpts,
     FastifyOtelLifecycleHookInfo,
+    FastifyOtelRequestContext,
     FastifyOtelRouteConfig
   }
   export { FastifyOtelInstrumentation }

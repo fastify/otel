@@ -113,6 +113,14 @@ For more information about OpenTelemetry, please refer to the [OpenTelemetry Jav
 
 The `FastifyOtelRequestContext` is a wrapper around the OpenTelemetry `Context` and `Tracer` APIs. It also provides a way to manage the context of a request and its associated spans as well as some utilities to extract and inject further traces from and to the trace carrier.
 
+#### `FastifyOtelRequestContext#enabled: boolean`
+Whether OpenTelemetry is enabled for the instrumentation and route configuration.
+
+#### `FastifyOtelRequestContext#instrumented: boolean`
+Whether the current request has an OpenTelemetry span and context. This can be `false`
+when instrumentation is enabled, but the request is intentionally skipped by options such
+as `ignorePaths`. Use it as a runtime signal before using request span APIs.
+
 #### `FastifyOtelRequestContext#context: Context`
 The OpenTelemetry context object.
 
@@ -143,7 +151,13 @@ const app = fastify();
 await app.register(fastifyOtelInstrumentation.plugin());
 
 app.get('/', (req, reply) => {
-  const { context, tracer, span, inject, extract } = req.opentelemetry();
+  const otel = req.opentelemetry();
+
+  if (!otel.instrumented || otel.span == null || otel.context == null) {
+    return 'hello world';
+  }
+
+  const { context, tracer, span, inject, extract } = otel;
 
   // Extract a parent span from the request headers
   const parentCxt = extract(req.headers);
