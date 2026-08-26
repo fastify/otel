@@ -26,7 +26,8 @@ const complexOpts = {
     expect(info.handler).type.toBeAssignableTo<string | undefined>()
   },
   recordExceptions: false,
-  instrumentHooks: ['preHandler']
+  instrumentHooks: ['preHandler'],
+  instrumentHandler: false
 } as FastifyOtelInstrumentationOpts
 
 expect(complexOpts).type.toBeAssignableTo<InstrumentationConfig>()
@@ -86,6 +87,14 @@ app.get('/with-otel-instrument-hooks-false', { config: { otel: { instrumentHooks
 })
 
 app.get('/with-otel-instrument-hooks-allowlist', { config: { otel: { instrumentHooks: ['preHandler'] } } }, async function (_request, _reply) {
+  return { hello: 'world' }
+})
+
+app.get('/with-otel-instrument-handler-false', { config: { otel: { instrumentHandler: false } } }, async function (_request, _reply) {
+  return { hello: 'world' }
+})
+
+app.get('/with-otel-instrument-handler-true', { config: { otel: { instrumentHandler: true } } }, async function (_request, _reply) {
   return { hello: 'world' }
 })
 

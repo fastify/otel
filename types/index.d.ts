@@ -18,7 +18,7 @@ declare module 'fastify' {
   }
 
   interface FastifyContextConfig {
-    /** Set to `false` to disable OpenTelemetry for the route, or use an object to control hook spans */
+    /** Set to `false` to disable OpenTelemetry for the route, or use an object to control handler and hook spans */
     otel?: boolean | FastifyOtelRouteConfig
   }
 }
