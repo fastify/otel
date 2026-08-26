@@ -756,6 +756,103 @@ describe('FastifyInstrumentation', () => {
       assert.equal(response.status, 200)
     })
 
+    test('should not create handler spans when instrumentHandler is false globally', async t => {
+      const localInstrumentation = new FastifyInstrumentation({ instrumentHandler: false })
+      localInstrumentation.setTracerProvider(provider)
+      const app = Fastify()
+      const plugin = localInstrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld () {
+        return 'hello world'
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      assert.equal(spans.length, 1)
+      assert.equal(spans[0].name, 'request')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should not create handler spans when route config disables instrumentHandler', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get(
+        '/',
+        { config: { otel: { instrumentHandler: false } } },
+        async function helloworld () {
+          return 'hello world'
+        }
+      )
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      assert.equal(spans.length, 1)
+      assert.equal(spans[0].name, 'request')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
+    test('should override global instrumentHandler false per route', async t => {
+      const localInstrumentation = new FastifyInstrumentation({ instrumentHandler: false })
+      localInstrumentation.setTracerProvider(provider)
+      const app = Fastify()
+      const plugin = localInstrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get(
+        '/',
+        { config: { otel: { instrumentHandler: true } } },
+        async function helloworld () {
+          return 'hello world'
+        }
+      )
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      assert.equal(spans.length, 2)
+      assert.equal(spans.find(s => s.name === 'request') != null, true)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld') != null, true)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'hello world')
+    })
+
     test('should create only allowlisted lifecycle hook spans when instrumentHooks is an array', async t => {
       const localInstrumentation = new FastifyInstrumentation({
         instrumentHooks: ['preHandler']

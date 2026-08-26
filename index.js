@@ -49,6 +49,7 @@ const kSetNotFoundOriginal = Symbol('fastify otel setnotfound original')
 const kIgnorePaths = Symbol('fastify otel ignore path')
 const kRecordExceptions = Symbol('fastify otel record exceptions')
 const kInstrumentHooks = Symbol('fastify otel instrument hooks')
+const kInstrumentHandler = Symbol('fastify otel instrument handler')
 
 function isRouteOtelDisabled (config) {
   return config?.otel === false
@@ -104,6 +105,14 @@ function getHookPolicy (config, globalPolicy, logger = null) {
   return globalPolicy
 }
 
+function shouldInstrumentHandler (config, globalSetting) {
+  const otel = config?.otel
+  if (otel != null && typeof otel === 'object' && typeof otel.instrumentHandler === 'boolean') {
+    return otel.instrumentHandler
+  }
+  return globalSetting
+}
+
 function lifecycleHookBaseName (hookName) {
   if (FASTIFY_HOOKS.includes(hookName)) {
     return hookName
@@ -144,6 +153,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
     this[kIgnorePaths] = null
     this[kRecordExceptions] = true
     this[kInstrumentHooks] = normalizeInstrumentHooks(true)
+    this[kInstrumentHandler] = true
 
     if (config?.recordExceptions != null) {
       if (typeof config.recordExceptions !== 'boolean') {
@@ -151,6 +161,13 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       }
 
       this[kRecordExceptions] = config.recordExceptions
+    }
+    if (config?.instrumentHandler != null) {
+      if (typeof config.instrumentHandler !== 'boolean') {
+        throw new TypeError('instrumentHandler must be a boolean')
+      }
+
+      this[kInstrumentHandler] = config.instrumentHandler
     }
     if (typeof config?.requestHook === 'function') {
       this._requestHook = config.requestHook
@@ -348,15 +365,17 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
           routeOptions.onError = recordErrorInSpanHook
         }
 
-        routeOptions.handler = handlerWrapper(routeOptions.handler, 'handler', {
-          [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route-handler`,
-          [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.HANDLER,
-          [ATTR_HTTP_ROUTE]: routeOptions.url,
-          [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
-            routeOptions.handler.name.length > 0
-              ? routeOptions.handler.name
-              : ANONYMOUS_FUNCTION_NAME
-        })
+        if (shouldInstrumentHandler(routeOptions.config, instrumentation[kInstrumentHandler])) {
+          routeOptions.handler = handlerWrapper(routeOptions.handler, 'handler', {
+            [ATTRIBUTE_NAMES.HOOK_NAME]: `${this.pluginName} - route-handler`,
+            [ATTRIBUTE_NAMES.FASTIFY_TYPE]: HOOK_TYPES.HANDLER,
+            [ATTR_HTTP_ROUTE]: routeOptions.url,
+            [ATTRIBUTE_NAMES.HOOK_CALLBACK_NAME]:
+              routeOptions.handler.name.length > 0
+                ? routeOptions.handler.name
+                : ANONYMOUS_FUNCTION_NAME
+          })
+        }
       })
 
       instance.addHook('onRequest', function startRequestSpanHook (request, _reply, hookDone) {

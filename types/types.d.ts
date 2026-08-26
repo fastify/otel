@@ -15,6 +15,7 @@ export type FastifyOtelHookName =
 
 export interface FastifyOtelRouteConfig {
   instrumentHooks?: boolean | FastifyOtelHookName[]
+  instrumentHandler?: boolean
 }
 
 export interface FastifyOtelOptions {}
@@ -25,6 +26,7 @@ export interface FastifyOtelInstrumentationOpts extends InstrumentationConfig {
   lifecycleHook?: (span: import('@opentelemetry/api').Span, info: FastifyOtelLifecycleHookInfo) => void
   recordExceptions?: boolean
   instrumentHooks?: boolean | FastifyOtelHookName[]
+  instrumentHandler?: boolean
 }
 
 export interface FastifyOtelLifecycleHookInfo {

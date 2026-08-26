@@ -18,7 +18,7 @@ npm i @fastify/otel
 
 It must be configured before defining routes and other plugins in order to cover the most of your Fastify server.
 
-- It automatically wraps the main request handler
+- It automatically wraps the main request handler by default; use `instrumentHandler` globally or per-route to disable its child span
 - Instruments all route hooks (defined at instance and route definition level) by default; use `instrumentHooks` globally or per-route to control auto-instrumented hook spans
   - `onRequest`
   - `preParsing`
@@ -60,6 +60,8 @@ app.addHook('onError', () => /* do something */)
 app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
 // Keep request and handler spans but skip lifecycle hook spans on a route
 app.get('/api', { config: { otel: { instrumentHooks: false } } }, () => 'ok')
+// Keep the request span but skip the handler child span on a route
+app.get('/health', { config: { otel: { instrumentHandler: false } } }, () => 'ok')
 
 // you can also scope your instrumentation to only be enabled on a sub context
 // of your application
@@ -262,9 +264,20 @@ const otel = new FastifyOtelInstrumentation({ instrumentHooks: false })
 app.get('/debug', { config: { otel: { instrumentHooks: ['onRequest'] } } }, handler)
 ```
 
+#### `FastifyOtelInstrumentationOptions#instrumentHandler: boolean`
+
+Control whether the Fastify route handler receives a child span. Defaults to `true`.
+
+Set `instrumentHandler: false` globally to keep request spans without route handler child spans. A route can override the global setting with `config.otel.instrumentHandler`. Setting `otel: false` still disables all OpenTelemetry spans for the route.
+
+```js
+const otel = new FastifyOtelInstrumentation({ instrumentHandler: false })
+app.get('/debug', { config: { otel: { instrumentHandler: true } } }, handler)
+```
+
 #### `FastifyOtelInstrumentationOptions#lifecycleHook: function`
 
-A **synchronous** callback that runs whenever a span is created for an instrumented Fastify lifecycle hook (route hooks, instance hooks, not-found handlers, and route handlers). It is not invoked when `instrumentHooks` skips a hook.
+A **synchronous** callback that runs whenever a span is created for an instrumented Fastify lifecycle hook (route hooks, instance hooks, not-found handlers, and route handlers). It is not invoked when `instrumentHooks` skips a hook or `instrumentHandler` skips a route handler.
 * **span** – the hook span that was just created
 * **info.hookName** – Fastify lifecycle stage (e.g., `onRequest`, `preHandler`, `handler`)
 * **info.handler** – the resolved handler or plugin name when available

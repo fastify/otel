@@ -64,6 +64,12 @@ describe('Interface', () => {
     assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: ['preHandler'] }))
   })
 
+  test('FastifyOtelInstrumentationOpts#instrumentHandler - should be a boolean', async t => {
+    assert.throws(() => new FastifyInstrumentation({ instrumentHandler: 'nope' }), /boolean/)
+    assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHandler: false }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHandler: true }))
+  })
+
   test('NamedFastifyInstrumentation#plugin should return a valid Fastify Plugin', async t => {
     const app = Fastify()
     const instrumentation = new FastifyOtelInstrumentation()
