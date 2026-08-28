@@ -61,6 +61,7 @@ describe('Interface', () => {
     assert.throws(() => new FastifyInstrumentation({ instrumentHooks: ['notAHook'] }), /boolean or an array/)
     assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: false }))
     assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: true }))
+    assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: ['handler'] }))
     assert.doesNotThrow(() => new FastifyInstrumentation({ instrumentHooks: ['preHandler'] }))
   })
 

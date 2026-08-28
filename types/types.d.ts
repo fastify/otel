@@ -4,6 +4,7 @@ import type { Context, Span, TextMapGetter, TextMapSetter, Tracer } from '@opent
 import type { HTTPMethods } from 'fastify'
 
 export type FastifyOtelHookName =
+  | 'handler'
   | 'onRequest'
   | 'preParsing'
   | 'preValidation'

@@ -244,15 +244,15 @@ const otel = new FastifyOtelInstrumentation({
 
 Control which Fastify lifecycle hooks receive child spans. Defaults to instrumenting all hooks listed in Usage.
 
-* `true` (default) – instrument all lifecycle hooks (`onRequest`, `preParsing`, `preValidation`, `preHandler`, `preSerialization`, `onSend`, `onResponse`, `onError`)
-* `false` – no lifecycle hook child spans (the root `request` span and route `handler` span are still created)
-* `string[]` – allowlist of hook names to instrument (for example `['preHandler']`)
+* `true` (default) – instrument the route `handler` and all lifecycle hooks (`onRequest`, `preParsing`, `preValidation`, `preHandler`, `preSerialization`, `onSend`, `onResponse`, `onError`)
+* `false` – no handler or lifecycle hook child spans (the root `request` span is still created)
+* `string[]` – allowlist of hook names to instrument (for example `['handler', 'preHandler']`)
 
 Per-route override via `config.otel`:
 
 * `otel: false` – disable all OpenTelemetry spans for the route (unchanged)
-* `otel: { instrumentHooks: false }` – request and handler spans only
-* `otel: { instrumentHooks: true }` – all lifecycle hooks on the route (overrides a global `false`)
+* `otel: { instrumentHooks: false }` – request span only
+* `otel: { instrumentHooks: true }` – handler and all lifecycle hooks on the route (overrides a global `false`)
 * `otel: { instrumentHooks: ['preHandler'] }` – allowlist for the route (overrides global settings)
 
 Precedence: `otel: false`, then route `otel.instrumentHooks` when set, otherwise the global `instrumentHooks` option.

@@ -27,6 +27,7 @@ const FASTIFY_HOOKS = [
   'onResponse',
   'onError'
 ]
+const INSTRUMENTABLE_HOOKS = [...FASTIFY_HOOKS, 'handler']
 const ATTRIBUTE_NAMES = {
   HOOK_NAME: 'hook.name',
   FASTIFY_TYPE: 'fastify.type',
@@ -77,7 +78,7 @@ function normalizeInstrumentHooks (value, { strict = false, logger = null } = {}
   const allowlist = new Set()
 
   for (const hookName of value) {
-    if (typeof hookName !== 'string' || !FASTIFY_HOOKS.includes(hookName)) {
+    if (typeof hookName !== 'string' || !INSTRUMENTABLE_HOOKS.includes(hookName)) {
       if (strict) {
         throw new TypeError('instrumentHooks must be a boolean or an array of hook names')
       }
@@ -105,12 +106,12 @@ function getHookPolicy (config, globalPolicy, logger = null) {
 }
 
 function lifecycleHookBaseName (hookName) {
-  if (FASTIFY_HOOKS.includes(hookName)) {
+  if (INSTRUMENTABLE_HOOKS.includes(hookName)) {
     return hookName
   }
   if (hookName.includes(' - ')) {
     const base = hookName.split(' - ').pop()
-    if (FASTIFY_HOOKS.includes(base)) {
+    if (INSTRUMENTABLE_HOOKS.includes(base)) {
       return base
     }
   }

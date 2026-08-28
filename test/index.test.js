@@ -712,9 +712,9 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 2)
+      assert.equal(spans.length, 1)
       assert.equal(spans.find(s => s.name === 'request') != null, true)
-      assert.equal(spans.find(s => s.name === 'handler - helloworld') != null, true)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld'), undefined)
       assert.equal(spans.find(s => s.name.startsWith('onRequest -')), undefined)
       assert.equal(spans.find(s => s.name.startsWith('preHandler -')), undefined)
       assert.equal(response.status, 200)
@@ -750,7 +750,8 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 2)
+      assert.equal(spans.length, 1)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld'), undefined)
       assert.equal(spans.find(s => s.name.startsWith('onRequest -')), undefined)
       assert.equal(spans.find(s => s.name.startsWith('preHandler -')), undefined)
       assert.equal(response.status, 200)
@@ -789,9 +790,51 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 3)
+      assert.equal(spans.length, 2)
       assert.equal(spans.find(s => s.name === 'preHandler - somePreHandler') != null, true)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld'), undefined)
       assert.equal(spans.find(s => s.name.startsWith('onRequest -')), undefined)
+      assert.equal(response.status, 200)
+    })
+
+    test('should create only the handler span when instrumentHooks allows handler', async t => {
+      const localInstrumentation = new FastifyInstrumentation({
+        instrumentHooks: ['handler']
+      })
+      localInstrumentation.setTracerProvider(provider)
+      const app = Fastify()
+      const plugin = localInstrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get(
+        '/',
+        {
+          onRequest: (request, reply, done) => { done() },
+          preHandler: (request, reply, done) => { done() }
+        },
+        async function helloworld () {
+          return 'hello world'
+        }
+      )
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      assert.equal(spans.length, 2)
+      assert.equal(spans.find(s => s.name === 'request') != null, true)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld') != null, true)
+      assert.equal(spans.find(s => s.name.startsWith('onRequest -')), undefined)
+      assert.equal(spans.find(s => s.name.startsWith('preHandler -')), undefined)
       assert.equal(response.status, 200)
     })
 
@@ -822,7 +865,7 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 2)
+      assert.equal(spans.length, 1)
     })
 
     test('should ignore invalid per-route instrumentHooks allowlist entries', async t => {
@@ -852,7 +895,8 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 2)
+      assert.equal(spans.length, 1)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld'), undefined)
       assert.equal(spans.find(s => s.name.startsWith('onRequest -')), undefined)
     })
 
@@ -889,9 +933,10 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 3)
+      assert.equal(spans.length, 2)
       assert.equal(spans.find(s => s.name.startsWith('onRequest -')), undefined)
       assert.equal(spans.find(s => s.name === 'preHandler - routePreHandler') != null, true)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld'), undefined)
     })
 
     test('should override global instrumentHooks false with per-route allowlist', async t => {
@@ -926,8 +971,9 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
-      assert.equal(spans.length, 3)
+      assert.equal(spans.length, 2)
       assert.equal(spans.find(s => s.name === 'onRequest - routeOnRequest') != null, true)
+      assert.equal(spans.find(s => s.name === 'handler - helloworld'), undefined)
       assert.equal(spans.find(s => s.name.startsWith('preHandler -')), undefined)
       assert.equal(response.status, 200)
     })
