@@ -44,6 +44,7 @@ const ANONYMOUS_FUNCTION_NAME = 'anonymous'
 const kInstrumentation = Symbol('fastify otel instance')
 const kRequestSpan = Symbol('fastify otel request spans')
 const kRequestContext = Symbol('fastify otel request context')
+const kErrorStatusSet = Symbol('fastify otel error status set')
 const kAddHookOriginal = Symbol('fastify otel addhook original')
 const kSetNotFoundOriginal = Symbol('fastify otel setnotfound original')
 const kIgnorePaths = Symbol('fastify otel ignore path')
@@ -284,6 +285,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       })
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
+      instance.decorateRequest(kErrorStatusSet, false)
 
       instance.addHook('onRoute', function otelWireRoute (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
@@ -460,6 +462,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
 
         request[kRequestSpan] = null
+        request[kErrorStatusSet] = false
 
         hookDone()
       })
@@ -474,7 +477,11 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         const span = request[kRequestSpan]
 
         if (span != null) {
-          if (reply.statusCode >= 500) {
+          // setStatus replaces the status, so setting a bare ERROR here would
+          // drop the description recorded by recordErrorInSpanHook. A 5xx that
+          // never threw (e.g. reply.code(500).send()) has no description of its
+          // own, so it still needs the bare status.
+          if (reply.statusCode >= 500 && request[kErrorStatusSet] === false) {
             span.setStatus({ code: SpanStatusCode.ERROR })
           }
 
@@ -485,6 +492,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         }
 
         request[kRequestSpan] = null
+        request[kErrorStatusSet] = false
 
         hookDone(null, payload)
       }
@@ -498,6 +506,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             code: SpanStatusCode.ERROR,
             message: error.message
           })
+          request[kErrorStatusSet] = true
           if (instrumentation[kRecordExceptions] !== false) {
             span.recordException(error)
           }
