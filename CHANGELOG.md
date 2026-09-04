@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.21.0](https://github.com/fastify/otel/compare/v0.20.1...v0.21.0) (2026-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* split instrumented | enabled OTEL context (#171)
+
+### Features
+
+* allow disabling handler instrumentation ([7c02d0a](https://github.com/fastify/otel/commit/7c02d0aaccfa27b0cc9924fa83bf9e016babcd67))
+* split instrumented | enabled OTEL context ([#171](https://github.com/fastify/otel/issues/171)) ([4c1548d](https://github.com/fastify/otel/commit/4c1548db4829df6a025f54144c05518a67343c93))
+
+
+### Bug Fixes
+
+* support array hooks in setNotFoundHandler ([#175](https://github.com/fastify/otel/issues/175)) ([90f9379](https://github.com/fastify/otel/commit/90f93790f72ba7384bb85457767b64aa836bd3e8))
+
 ## [0.19.0](https://github.com/fastify/otel/compare/v0.18.1...v0.19.0) (2026-06-12)
 
 
