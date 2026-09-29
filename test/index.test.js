@@ -1151,6 +1151,104 @@ describe('FastifyInstrumentation', () => {
       assert.equal(response.status, 500)
     })
 
+    test('should keep the error description on the request span (5xx)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld () {
+        throw new Error('kaboom')
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const handler = spans.find(span => span.name.startsWith('handler'))
+      const start = spans.find(span => span.name === 'request')
+
+      assert.equal(spans.length, 2)
+      assert.equal(response.status, 500)
+      assert.deepStrictEqual(handler.status, {
+        code: SpanStatusCode.ERROR,
+        message: 'kaboom'
+      })
+      assert.deepStrictEqual(start.status, {
+        code: SpanStatusCode.ERROR,
+        message: 'kaboom'
+      })
+    })
+
+    test('should keep the error description on the request span (4xx)', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld () {
+        const error = new Error('kaboom')
+        error.statusCode = 400
+        throw error
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const start = spans.find(span => span.name === 'request')
+
+      assert.equal(response.status, 400)
+      assert.deepStrictEqual(start.status, {
+        code: SpanStatusCode.ERROR,
+        message: 'kaboom'
+      })
+    })
+
+    test('should set an error status on a 5xx reply that did not throw', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.get('/', async function helloworld (request, reply) {
+        return reply.code(500).send('not an exception')
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/`
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const start = spans.find(span => span.name === 'request')
+
+      assert.equal(response.status, 500)
+      assert.deepStrictEqual(start.status, { code: SpanStatusCode.ERROR })
+    })
+
     test('should create named span (404)', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
