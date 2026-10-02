@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.21.1](https://github.com/fastify/otel/compare/v0.21.0...v0.21.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* preserve the error description on the request span for 5xx ([#191](https://github.com/fastify/otel/issues/191)) ([0a11643](https://github.com/fastify/otel/commit/0a1164310b1c96a2be2b8a56bad6cf3c591a0760)), closes [/github.com/fastify/.github/blob/main/CONTRIBUTING.md#developers-certificate-of-origin-11](https://github.com/fastify//github.com/fastify/.github/blob/main/CONTRIBUTING.md/issues/developers-certificate-of-origin-11)
+
 ## [0.21.0](https://github.com/fastify/otel/compare/v0.20.1...v0.21.0) (2026-09-04)
 
 
