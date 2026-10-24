@@ -7,6 +7,7 @@ const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
 const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
 const { InMemorySpanExporter, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base')
+const { SpanStatusCode } = require('@opentelemetry/api')
 
 const FastifyInstrumentation = require('..')
 const { FastifyOtelInstrumentation } = require('..')
@@ -563,6 +564,158 @@ describe('Interface', () => {
 
     assert.ok(handlerSpan)
     assert.equal(handlerSpan.events.length, 0)
+
+    await app.close()
+    instrumentation.disable()
+  })
+
+  test('records a thrown handler error once, not on the request span', async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation()
+    instrumentation.setTracerProvider(provider)
+
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+    await app.register(instrumentation.plugin())
+
+    app.get('/', async function failure () {
+      throw new Error('synthetic failure')
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 500)
+
+    const spans = exporter.getFinishedSpans()
+    const handlerSpan = spans.find((span) => span.name.startsWith('handler'))
+    const requestSpan = spans.find((span) => span.name === 'request')
+
+    assert.equal(handlerSpan.status.code, SpanStatusCode.ERROR)
+    assert.equal(requestSpan.status.code, SpanStatusCode.ERROR)
+    assert.equal(handlerSpan.events.length, 1)
+    assert.equal(handlerSpan.events[0].name, 'exception')
+    assert.equal(requestSpan.events.length, 0)
+
+    await app.close()
+    instrumentation.disable()
+  })
+
+  test('records a thrown hook error once, not on the request span', async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation()
+    instrumentation.setTracerProvider(provider)
+
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+    await app.register(instrumentation.plugin())
+
+    app.addHook('preHandler', function () {
+      throw new Error('hook failure')
+    })
+    app.get('/', async () => 'ok')
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 500)
+
+    const spans = exporter.getFinishedSpans()
+    const hookSpan = spans.find((span) => span.name.startsWith('preHandler'))
+    const requestSpan = spans.find((span) => span.name === 'request')
+
+    assert.equal(hookSpan.status.code, SpanStatusCode.ERROR)
+    assert.equal(requestSpan.status.code, SpanStatusCode.ERROR)
+    assert.equal(hookSpan.events.length, 1)
+    assert.equal(hookSpan.events[0].name, 'exception')
+    assert.equal(requestSpan.events.length, 0)
+
+    await app.close()
+    instrumentation.disable()
+  })
+
+  test('records an error sent via reply.send on the request span', async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation()
+    instrumentation.setTracerProvider(provider)
+
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+    await app.register(instrumentation.plugin())
+
+    app.get('/', async (request, reply) => {
+      return reply.send(new Error('send failure'))
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 500)
+
+    const spans = exporter.getFinishedSpans()
+    const requestSpan = spans.find((span) => span.name === 'request')
+
+    assert.equal(requestSpan.status.code, SpanStatusCode.ERROR)
+    assert.equal(requestSpan.events.length, 1)
+    assert.equal(requestSpan.events[0].name, 'exception')
+
+    await app.close()
+    instrumentation.disable()
+  })
+
+  test('records a primitive throw once, not on the request span', async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    })
+    provider.register()
+
+    const instrumentation = new FastifyInstrumentation()
+    instrumentation.setTracerProvider(provider)
+
+    /** @type {import('fastify').FastifyInstance} */
+    const app = Fastify()
+    await app.register(instrumentation.plugin())
+
+    app.get('/', async function failure () {
+      // eslint-disable-next-line no-throw-literal
+      throw 'primitive failure'
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    assert.equal(res.statusCode, 500)
+
+    const spans = exporter.getFinishedSpans()
+    const handlerSpan = spans.find((span) => span.name.startsWith('handler'))
+    const requestSpan = spans.find((span) => span.name === 'request')
+
+    assert.equal(handlerSpan.events.length, 1)
+    assert.equal(requestSpan.events.length, 0)
 
     await app.close()
     instrumentation.disable()

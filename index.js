@@ -51,6 +51,7 @@ const kIgnorePaths = Symbol('fastify otel ignore path')
 const kRecordExceptions = Symbol('fastify otel record exceptions')
 const kInstrumentHooks = Symbol('fastify otel instrument hooks')
 const kInstrumentHandler = Symbol('fastify otel instrument handler')
+const kRecordedErrors = Symbol('fastify otel recorded errors')
 
 function isRouteOtelDisabled (config) {
   return config?.otel === false
@@ -141,6 +142,16 @@ function shouldInstrumentLifecycleHook (hookName, policy) {
     return false
   }
   return policy.set.has(base)
+}
+
+function recordErrorForRequest (request, error) {
+  // Tracks the errors already recorded on a child (handler/hook) span so the
+  // request span's onError hook does not record the same propagated exception
+  // again. Scoped to the request and able to hold primitives (e.g. `throw 'foo'`).
+  if (request[kRecordedErrors] == null) {
+    request[kRecordedErrors] = new Set()
+  }
+  request[kRecordedErrors].add(error)
 }
 
 class FastifyOtelInstrumentation extends InstrumentationBase {
@@ -286,6 +297,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
       instance.decorateRequest(kRequestSpan, null)
       instance.decorateRequest(kRequestContext, null)
       instance.decorateRequest(kErrorStatusSet, false)
+      instance.decorateRequest(kRecordedErrors, null)
 
       instance.addHook('onRoute', function otelWireRoute (routeOptions) {
         if (instrumentation[kIgnorePaths]?.(routeOptions) === true) {
@@ -507,7 +519,17 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
             message: error.message
           })
           request[kErrorStatusSet] = true
-          if (instrumentation[kRecordExceptions] !== false) {
+          // The exception may already have been recorded on the child
+          // (handler/hook) span where it was thrown. Recording it again here
+          // would make a single thrown error appear as two exception events
+          // on the same trace, which backends count as two failures. The set
+          // is scoped to the request, so the same error object reused across
+          // requests (or a primitive throw) is still recorded exactly once
+          // per span where it is thrown.
+          if (
+            instrumentation[kRecordExceptions] !== false &&
+            !request[kRecordedErrors]?.has(error)
+          ) {
             span.recordException(error)
           }
         }
@@ -701,6 +723,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
                       })
                       if (instrumentation[kRecordExceptions] !== false) {
                         span.recordException(error)
+                        recordErrorForRequest(request, error)
                       }
                       span.end()
                       return Promise.reject(error)
@@ -717,6 +740,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
                 })
                 if (instrumentation[kRecordExceptions] !== false) {
                   span.recordException(error)
+                  recordErrorForRequest(request, error)
                 }
                 span.end()
                 throw error
