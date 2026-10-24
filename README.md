@@ -303,6 +303,12 @@ Control whether the instrumentation automatically calls `span.recordException` w
 Defaults to `true`, recording every exception. Set it to `false` if you prefer to record only the
 exceptions that you consider actionable (for example to avoid noisy `4xx` entries in Datadog Error Tracking).
 
+When enabled, an exception thrown by an instrumented handler or hook is recorded once on the span where it
+was thrown (for example the handler or hook span). The resulting request span is still marked as `ERROR` with
+the error message, but the same propagated exception is not recorded again on it. Errors that never pass
+through a wrapped handler or hook — such as `reply.send(err)` or `done(err)` — are recorded on the request
+span. The duplicate-exception tracking is scoped per request.
+
 ## License
 
 Licensed under [MIT](./LICENSE).
