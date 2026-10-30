@@ -12,15 +12,15 @@ const assert = require('node:assert')
 const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
 const {
-  AsyncHooksContextManager
+  AsyncLocalStorageContextManager
 } = require('@opentelemetry/context-async-hooks')
-const { JaegerPropagator } = require('@opentelemetry/propagator-jaeger')
-const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
+const { W3CTraceContextPropagator } = require('@opentelemetry/core')
 const {
+  TracerProvider,
   InMemorySpanExporter,
   SimpleSpanProcessor,
   AlwaysOnSampler
-} = require('@opentelemetry/sdk-trace-base')
+} = require('@opentelemetry/sdk-trace')
 const {
   context,
   SpanKind,
@@ -38,16 +38,16 @@ const FastifyInstrumentation = require('..')
 describe('FastifyInstrumentation', () => {
   const httpInstrumentation = new HttpInstrumentation()
   const instrumentation = new FastifyInstrumentation()
-  const contextManager = new AsyncHooksContextManager()
+  const contextManager = new AsyncLocalStorageContextManager()
   const memoryExporter = new InMemorySpanExporter()
-  const spanProcessor = new SimpleSpanProcessor(memoryExporter)
-  const provider = new NodeTracerProvider({
+  const spanProcessor = new SimpleSpanProcessor({ exporter: memoryExporter })
+  const provider = new TracerProvider({
     sampler: new AlwaysOnSampler(),
     spanProcessors: [spanProcessor]
   })
 
-  provider.register()
-  propagation.setGlobalPropagator(new JaegerPropagator())
+  trace.setGlobalTracerProvider(provider)
+  propagation.setGlobalPropagator(new W3CTraceContextPropagator())
   context.setGlobalContextManager(contextManager)
   httpInstrumentation.setTracerProvider(provider)
   instrumentation.setTracerProvider(provider)

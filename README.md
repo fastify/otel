@@ -12,6 +12,10 @@ OpenTelemetry auto-instrumentation library.
 npm i @fastify/otel
 ```
 
+Requires Node.js >=22.15.0, OpenTelemetry API 1.10.x and SDK 3.x.
+Use SDK-generation 0.300.x packages for experimental OpenTelemetry packages,
+including `sdk-node` and `instrumentation-http`.
+
 ## Usage
 
 `@fastify/otel` works as a metric creator as well as application performance monitor for your Fastify application.
