@@ -16,21 +16,6 @@ Requires Node.js >=22.15.0, OpenTelemetry API 1.10.x and SDK 3.x.
 Use SDK-generation 0.300.x packages for experimental OpenTelemetry packages,
 including `sdk-node` and `instrumentation-http`.
 
-### Native ES modules
-
-Fastify plugin registration and `registerOnInitialization` work with native ESM.
-Initialize OpenTelemetry before creating the Fastify instance, for example:
-
-```sh
-node --import ./instrumentation.mjs ./app.mjs
-```
-
-Fastify instrumentation uses diagnostics channels and plugin hooks; it does not
-need a loader hook to intercept Fastify imports. Other instrumentations in the
-same application may require the
-[OpenTelemetry ESM loader hook](https://github.com/open-telemetry/opentelemetry-js/blob/main/doc/esm-support.md).
-Using `--import` for initialization alone does not enable ESM interception for those libraries.
-
 ## Usage
 
 `@fastify/otel` works as a metric creator as well as application performance monitor for your Fastify application.
