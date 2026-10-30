@@ -1,4 +1,4 @@
-const { default: fastify } = require('fastify')
+const fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 const { test, after, describe, beforeEach } = require('node:test')
 const { resourceFromAttributes } = require('@opentelemetry/resources')
 const { NodeSDK } = require('@opentelemetry/sdk-node')
