@@ -63,8 +63,8 @@
     "tstyche": "^7.0.0"
   },
   "dependencies": {
-    "@opentelemetry/core": "^2.0.0",
-    "@opentelemetry/instrumentation": "^0.223.0",
+    "@opentelemetry/core": "^3.0.0",
+    "@opentelemetry/instrumentation": "^0.300.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "minimatch": "^10.2.4"
   },
