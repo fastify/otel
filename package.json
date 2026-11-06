@@ -5,16 +5,20 @@
   "main": "index.js",
   "type": "commonjs",
   "types": "types/index.d.ts",
+  "engines": {
+    "node": ">=22.15.0"
+  },
   "scripts": {
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "test": "npm run test:all && npm run test:typescript",
-    "test:unit": "c8 --100 node --test",
+    "test:unit": "c8 --include=index.js --100 node --test",
     "test:all": "npm run test:v4 && npm run test:v5",
     "test:v4": "cross-env FASTIFY_VERSION=fastifyv4 npm run test:unit",
     "test:v5": "cross-env FASTIFY_VERSION=fastify npm run test:unit",
-    "test:coverage": "c8 node --test && c8 report --reporter=html",
-    "test:typescript": "tstyche"
+    "test:coverage": "c8 --include=index.js node --test && c8 report --reporter=html",
+    "test:typescript": "tstyche",
+    "test:consumer": "node scripts/verify-sdk3-consumer.js"
   },
   "repository": {
     "type": "git",
@@ -46,12 +50,11 @@
   ],
   "devDependencies": {
     "@fastify/type-provider-typebox": "^6.1.0",
-    "@opentelemetry/context-async-hooks": "^2.0.0",
-    "@opentelemetry/contrib-test-utils": "^0.70.0",
-    "@opentelemetry/instrumentation-http": "^0.223.0",
-    "@opentelemetry/propagator-jaeger": "^2.0.0",
-    "@opentelemetry/sdk-trace-base": "^2.0.0",
-    "@opentelemetry/sdk-trace-node": "^2.2.0",
+    "@opentelemetry/context-async-hooks": "^3.0.0",
+    "@opentelemetry/instrumentation-http": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-node": "^0.300.0",
+    "@opentelemetry/sdk-trace": "^3.0.0",
     "@types/node": "^26.0.0",
     "c8": "^12.0.0",
     "cross-env": "^10.0.0",
@@ -63,12 +66,12 @@
     "tstyche": "^7.0.0"
   },
   "dependencies": {
-    "@opentelemetry/core": "^2.0.0",
-    "@opentelemetry/instrumentation": "^0.223.0",
+    "@opentelemetry/core": "^3.0.0",
+    "@opentelemetry/instrumentation": "^0.300.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "minimatch": "^10.2.4"
   },
   "peerDependencies": {
-    "@opentelemetry/api": "^1.9.0"
+    "@opentelemetry/api": ">=1.10.0 <1.11.0"
   }
 }

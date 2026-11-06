@@ -11,13 +11,13 @@ const assert = require('node:assert')
 const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
 const {
-  AsyncHooksContextManager
+  AsyncLocalStorageContextManager
 } = require('@opentelemetry/context-async-hooks')
-const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
 const {
+  TracerProvider,
   InMemorySpanExporter,
   SimpleSpanProcessor
-} = require('@opentelemetry/sdk-trace-base')
+} = require('@opentelemetry/sdk-trace')
 const { context } = require('@opentelemetry/api')
 
 const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http')
@@ -32,10 +32,10 @@ describe('Environment variable aware FastifyInstrumentation', () => {
 
   const httpInstrumentation = new HttpInstrumentation()
   const instrumentation = new FastifyInstrumentation()
-  const contextManager = new AsyncHooksContextManager()
+  const contextManager = new AsyncLocalStorageContextManager()
   const memoryExporter = new InMemorySpanExporter()
-  const spanProcessor = new SimpleSpanProcessor(memoryExporter)
-  const provider = new NodeTracerProvider({
+  const spanProcessor = new SimpleSpanProcessor({ exporter: memoryExporter })
+  const provider = new TracerProvider({
     spanProcessors: [spanProcessor]
   })
 
@@ -123,7 +123,7 @@ describe('Environment variable aware FastifyInstrumentation', () => {
 
       const spans = memoryExporter
         .getFinishedSpans()
-        .filter(span => span.instrumentationLibrary.name === '@fastify/otel')
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
       assert.equal(spans.length, 0)
       assert.equal(otel.enabled, true)

@@ -5,8 +5,7 @@ const assert = require('node:assert')
 const Fastify = require(process.env.FASTIFY_VERSION || 'fastify')
 
 const { InstrumentationBase } = require('@opentelemetry/instrumentation')
-const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
-const { InMemorySpanExporter, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base')
+const { TracerProvider, InMemorySpanExporter, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace')
 const { SpanStatusCode } = require('@opentelemetry/api')
 
 const FastifyInstrumentation = require('..')
@@ -367,10 +366,9 @@ describe('Interface', () => {
 
     let hookCalled = false
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation({
       requestHook: (span, request) => {
@@ -430,10 +428,9 @@ describe('Interface', () => {
 
     const calls = []
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation({
       lifecycleHook: (span, info) => {
@@ -494,10 +491,9 @@ describe('Interface', () => {
 
   test('FastifyInstrumentationOptions#recordExceptions defaults to true', async () => {
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation()
     instrumentation.setTracerProvider(provider)
@@ -532,10 +528,9 @@ describe('Interface', () => {
 
   test('FastifyInstrumentationOptions#recordExceptions can be disabled', async () => {
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation({
       recordExceptions: false
@@ -571,10 +566,9 @@ describe('Interface', () => {
 
   test('records a thrown handler error once, not on the request span', async () => {
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation()
     instrumentation.setTracerProvider(provider)
@@ -610,10 +604,9 @@ describe('Interface', () => {
 
   test('records a thrown hook error once, not on the request span', async () => {
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation()
     instrumentation.setTracerProvider(provider)
@@ -650,10 +643,9 @@ describe('Interface', () => {
 
   test('records an error sent via reply.send on the request span', async () => {
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation()
     instrumentation.setTracerProvider(provider)
@@ -686,10 +678,9 @@ describe('Interface', () => {
 
   test('records a primitive throw once, not on the request span', async () => {
     const exporter = new InMemorySpanExporter()
-    const provider = new NodeTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)]
+    const provider = new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })]
     })
-    provider.register()
 
     const instrumentation = new FastifyInstrumentation()
     instrumentation.setTracerProvider(provider)
