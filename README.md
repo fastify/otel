@@ -308,10 +308,11 @@ Defaults to `true`, recording every exception. Set it to `false` if you prefer t
 exceptions that you consider actionable (for example to avoid noisy `4xx` entries in Datadog Error Tracking).
 
 When enabled, an exception thrown by an instrumented handler or hook is recorded once on the span where it
-was thrown (for example the handler or hook span). The resulting request span is still marked as `ERROR` with
-the error message, but the same propagated exception is not recorded again on it. Errors that never pass
-through a wrapped handler or hook — such as `reply.send(err)` or `done(err)` — are recorded on the request
-span. The duplicate-exception tracking is scoped per request.
+was thrown (for example the handler or hook span). The same propagated exception is not recorded again on
+the request span. The completed HTTP server span stays unset for a 4xx response and is set to `ERROR` for a
+5xx response, keeping the error message when one was captured. Errors that never pass through a wrapped
+handler or hook — such as `reply.send(err)` or `done(err)` — are recorded on the request span when that
+response is a 5xx. The duplicate-exception tracking is scoped per request.
 
 ## License
 
