@@ -1,0 +1,13 @@
+{
+  "name": "fastify-otel-getting-started",
+  "private": true,
+  "scripts": {
+    "start": "node --import ./otel.js app.js"
+  },
+  "dependencies": {
+    "@fastify/otel": "latest",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.300.0",
+    "@opentelemetry/sdk-node": "^0.300.0",
+    "fastify": "^5.0.0"
+  }
+}
