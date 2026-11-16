@@ -1188,7 +1188,7 @@ describe('FastifyInstrumentation', () => {
       })
     })
 
-    test('should keep the error description on the request span (4xx)', async t => {
+    test('should leave the request span unset when a thrown error is a 4xx', async t => {
       const app = Fastify()
       const plugin = instrumentation.plugin()
 
@@ -1212,13 +1212,58 @@ describe('FastifyInstrumentation', () => {
         .getFinishedSpans()
         .filter(span => span.instrumentationScope.name === '@fastify/otel')
 
+      const handler = spans.find(span => span.name.startsWith('handler'))
       const start = spans.find(span => span.name === 'request')
 
       assert.equal(response.status, 400)
-      assert.deepStrictEqual(start.status, {
+      assert.deepStrictEqual(handler.status, {
         code: SpanStatusCode.ERROR,
         message: 'kaboom'
       })
+      assert.equal(start.status.code, SpanStatusCode.UNSET)
+      assert.equal(
+        start.events.filter(event => event.name === 'exception').length,
+        0
+      )
+    })
+
+    // https://github.com/fastify/otel/issues/209
+    // Fastify rejects the body before the route handler runs. The HTTP server
+    // span for that 415 must stay unset, per the OpenTelemetry HTTP conventions.
+    test('should not mark a Fastify-generated 415 as a request span error', async t => {
+      const app = Fastify()
+      const plugin = instrumentation.plugin()
+
+      await app.register(plugin)
+
+      app.post('/upload', async function upload () {
+        return { ok: true }
+      })
+
+      await app.listen()
+
+      after(() => app.close())
+
+      const response = await fetch(
+        `http://localhost:${app.server.address().port}/upload`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/octet-stream' },
+          body: 'payload'
+        }
+      )
+
+      const spans = memoryExporter
+        .getFinishedSpans()
+        .filter(span => span.instrumentationScope.name === '@fastify/otel')
+
+      const start = spans.find(span => span.name === 'request')
+      const exceptionEvents = start.events.filter(event => event.name === 'exception')
+
+      assert.equal(response.status, 415)
+      assert.equal(start.attributes['http.response.status_code'], 415)
+      assert.equal(start.status.code, SpanStatusCode.UNSET)
+      assert.equal(exceptionEvents.length, 0)
     })
 
     test('should set an error status on a 5xx reply that did not throw', async t => {

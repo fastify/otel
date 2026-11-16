@@ -52,6 +52,7 @@ const kRecordExceptions = Symbol('fastify otel record exceptions')
 const kInstrumentHooks = Symbol('fastify otel instrument hooks')
 const kInstrumentHandler = Symbol('fastify otel instrument handler')
 const kRecordedErrors = Symbol('fastify otel recorded errors')
+const kPendingSpanError = Symbol('fastify otel pending span error')
 
 function isRouteOtelDisabled (config) {
   return config?.otel === false
@@ -467,6 +468,7 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         const span = request[kRequestSpan]
 
         if (span != null) {
+          applyServerSpanStatus(span, request, reply)
           span.setAttributes({
             [ATTR_HTTP_RESPONSE_STATUS_CODE]: reply.statusCode
           })
@@ -489,13 +491,10 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         const span = request[kRequestSpan]
 
         if (span != null) {
-          // setStatus replaces the status, so setting a bare ERROR here would
-          // drop the description recorded by recordErrorInSpanHook. A 5xx that
-          // never threw (e.g. reply.code(500).send()) has no description of its
-          // own, so it still needs the bare status.
-          if (reply.statusCode >= 500 && request[kErrorStatusSet] === false) {
-            span.setStatus({ code: SpanStatusCode.ERROR })
-          }
+          // Fastify assigns the final status after onError, so classification
+          // waits until the response is finished. A server span stays unset
+          // for 4xx, per the OpenTelemetry HTTP semantic conventions.
+          applyServerSpanStatus(span, request, reply)
 
           span.setAttributes({
             [ATTR_HTTP_RESPONSE_STATUS_CODE]: reply.statusCode
@@ -509,29 +508,35 @@ class FastifyOtelInstrumentation extends InstrumentationBase {
         hookDone(null, payload)
       }
 
-      function recordErrorInSpanHook (request, reply, error, hookDone) {
-        /** @type {Span} */
-        const span = request[kRequestSpan]
+      function applyServerSpanStatus (span, request, reply) {
+        if (reply.statusCode < 500 || request[kErrorStatusSet] === true) {
+          return
+        }
 
-        if (span != null) {
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: error.message
-          })
-          request[kErrorStatusSet] = true
-          // The exception may already have been recorded on the child
-          // (handler/hook) span where it was thrown. Recording it again here
-          // would make a single thrown error appear as two exception events
-          // on the same trace, which backends count as two failures. The set
-          // is scoped to the request, so the same error object reused across
-          // requests (or a primitive throw) is still recorded exactly once
-          // per span where it is thrown.
-          if (
-            instrumentation[kRecordExceptions] !== false &&
-            !request[kRecordedErrors]?.has(error)
-          ) {
-            span.recordException(error)
-          }
+        const error = request[kPendingSpanError]
+        const status = { code: SpanStatusCode.ERROR }
+        if (error?.message != null) {
+          status.message = error.message
+        }
+        span.setStatus(status)
+        request[kErrorStatusSet] = true
+
+        // The exception may already have been recorded on the child
+        // (handler/hook) span where it was thrown. Recording it again here
+        // would make a single thrown error appear as two exception events
+        // on the same trace, which backends count as two failures.
+        if (
+          error != null &&
+          instrumentation[kRecordExceptions] !== false &&
+          !request[kRecordedErrors]?.has(error)
+        ) {
+          span.recordException(error)
+        }
+      }
+
+      function recordErrorInSpanHook (request, reply, error, hookDone) {
+        if (request[kRequestSpan] != null) {
+          request[kPendingSpanError] = error
         }
 
         hookDone()
