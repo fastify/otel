@@ -111,6 +111,16 @@ sdk.start();
 > - This instrumentation requires `@opentelemetry/instrumentation-http` to be able to propagate the traces all the way back to upstream
 >   - The HTTP instrumentation might cover all your routes although `@fastify/otel` just covers a subset of your application
 
+### Getting started example
+
+The [`examples/getting-started`](./examples/getting-started) folder has a runnable setup with the Node SDK and automatic registration. It starts the SDK with `--import` and does not call `register` for the instrumentation:
+
+```sh
+cd examples/getting-started
+npm install
+npm start
+```
+
 For more information about OpenTelemetry, please refer to the [OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/) documentation.
 
 ## APIs
