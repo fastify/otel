@@ -1,6 +1,7 @@
 {
   "name": "fastify-otel-getting-started",
   "private": true,
+  "type": "module",
   "scripts": {
     "start": "node --import ./otel.js app.js"
   },

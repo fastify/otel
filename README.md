@@ -4,7 +4,7 @@
 [![NPM version](https://img.shields.io/npm/v/@fastify/otel.svg?style=flat)](https://www.npmjs.com/package/@fastify/otel)
 [![neostandard javascript style](https://img.shields.io/badge/code_style-neostandard-brightgreen?style=flat)](https://github.com/neostandard/neostandard)
 
-OpenTelemetry auto-instrumentation library.
+OpenTelemetry tracing instrumentation for Fastify.
 
 ## Install
 
@@ -16,14 +16,24 @@ Requires Node.js >=22.15.0, OpenTelemetry API 1.10.x and SDK 3.x.
 Use SDK-generation 0.300.x packages for experimental OpenTelemetry packages,
 including `sdk-node` and `instrumentation-http`.
 
-## Usage
+### Compatibility
 
-`@fastify/otel` works as a metric creator as well as application performance monitor for your Fastify application.
+| Plugin version | Fastify version |
+| -------------- | --------------- |
+| `>=0.2.x`      | `^4.x`, `^5.x`  |
+| `0.1.x`        | `^5.x`          |
 
-It must be configured before defining routes and other plugins in order to cover the most of your Fastify server.
+Please note that if a Fastify version is out of support, then so are the corresponding versions of this plugin
+in the table above.
+See [Fastify's LTS policy](https://github.com/fastify/fastify/blob/main/docs/Reference/LTS.md) for more details.
 
-- It automatically wraps the main request handler by default; use `instrumentHandler` globally or per-route to disable its child span
-- Instruments all route hooks (defined at instance and route definition level) by default; use `instrumentHooks` globally or per-route to control auto-instrumented hook spans
+## What it does
+
+`@fastify/otel` creates trace spans for the Fastify request lifecycle. For each request it creates:
+
+- A `request` span that covers the whole Fastify lifecycle of the request
+- A child span for the route handler; use `instrumentHandler` globally or per-route to disable it
+- A child span for every hook defined at instance or route level; use `instrumentHooks` globally or per-route to control them
   - `onRequest`
   - `preParsing`
   - `preValidation`
@@ -32,94 +42,221 @@ It must be configured before defining routes and other plugins in order to cover
   - `onSend`
   - `onResponse`
   - `onError`
-- Instruments automatically custom 404 Not Found handler
+- A child span for a custom 404 Not Found handler set with `setNotFoundHandler`, and for its `preValidation` and `preHandler` hooks
 
-Example:
+Hooks added before the plugin is registered are not instrumented.
+
+It is a Fastify plugin: it wraps the handlers and the hooks of the instance where it is registered and
+does not patch any module at load time. It does not export anything by itself and it does not record
+metrics. You still need an OpenTelemetry SDK that provides the tracer provider, the span processor and
+the exporter (see [Setup](#setup)).
+
+### Spans, metrics and other instrumentations
+
+| You want | You need |
+| --- | --- |
+| Fastify spans (request, handler, hooks) | `@fastify/otel` and a tracer provider with an exporter |
+| An HTTP server span around the Fastify spans | `@opentelemetry/instrumentation-http` next to `@fastify/otel` |
+| Metrics | Not provided by `@fastify/otel`. Use an instrumentation that records metrics and configure a metric reader in your SDK |
+
+`@opentelemetry/instrumentation-http` is optional:
+
+- Without it, the `request` span has kind `SERVER`. If there is no active span, the incoming trace
+  context (for example the `traceparent` header) is extracted from the request headers with the global
+  propagator.
+- With it, the HTTP instrumentation creates the `SERVER` span and the `request` span becomes an
+  `INTERNAL` child of it. `@fastify/otel` also sets the matched route on the HTTP span.
+- The HTTP instrumentation covers every request of the server, while `@fastify/otel` covers only the
+  Fastify instances (or encapsulated contexts) where it is registered.
+
+### Span names and attributes
+
+All spans are created with the instrumentation scope `@fastify/otel`.
+
+The `request` span has these attributes:
+
+| Attribute | Value |
+| --- | --- |
+| `fastify.root` | `@fastify/otel` |
+| `http.request.method` | The request method |
+| `url.path` | The request URL |
+| `http.route` | The matched route pattern, for example `/users/:id` |
+| `http.response.status_code` | The reply status code |
+
+Handler and hook spans are named `<hook> - <function name>`, for example `preHandler - checkAuth` or
+`handler - getUser`. When the function is anonymous, the name of the plugin that defines it is used
+instead. They have these attributes:
+
+| Attribute | Value |
+| --- | --- |
+| `hook.name` | The plugin name and the hook, for example `my-plugin - route -> preHandler` or `my-plugin - route-handler` |
+| `hook.callback.name` | The function name, or `anonymous` |
+| `fastify.type` | `request-handler` for the route handler, `route-hook` for hooks defined on the route, `hook` for instance hooks and Not Found handlers |
+| `http.route` | The route pattern (route handler and route hooks only) |
+
+A handler or hook span that throws or rejects has status `ERROR`. The `request` span has status `ERROR`
+only for 5xx responses (see [`recordExceptions`](#fastifyotelinstrumentationoptionsrecordexceptions-boolean)).
+
+## Setup
+
+There are two ways to attach the instrumentation to a Fastify instance. **Choose one of them, not both.**
+
+| | Automatic | Manual |
+| --- | --- | --- |
+| How | `registerOnInitialization: true` | `app.register(instrumentation.plugin())` |
+| Scope | Every Fastify instance of the process | Only the instance or encapsulated context where you register it |
+| Changes in the app code | None | One `register` call, before routes and other plugins |
+
+> If you set `registerOnInitialization: true` and also call `app.register(instrumentation.plugin())` on
+> the same instance, Fastify throws `FST_ERR_DEC_ALREADY_PRESENT`
+> (`The decorator ... has already been added!`). Remove one of the two. The same happens when the
+> plugin is registered both on an instance and on one of its encapsulated contexts.
+
+In both modes `app.hasPlugin('@fastify/otel')` returns `true`.
+
+In both cases the OpenTelemetry setup lives in its own file and must run before the application code.
+
+The examples use ES modules: set `"type": "module"` in your `package.json` or use the `.mjs` extension.
+
+### Automatic registration with the Node SDK
+
+This is the recommended setup. `NodeSDK` creates the tracer provider, registers it globally together
+with the context manager and the propagators, and hands the provider to every instrumentation in the
+`instrumentations` array. You do not have to call `setTracerProvider` yourself.
+
+`otel.js`
 
 ```js
-// ... in your OTEL setup
-const FastifyOtelInstrumentation = require('@fastify/otel');
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { FastifyOtelInstrumentation } from '@fastify/otel'
 
-// Service name comes from OpenTelemetry resources (via NodeSDK or OTEL_SERVICE_NAME)
-// as per https://opentelemetry.io/docs/languages/sdk-configuration/general/.
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation();
-fastifyOtelInstrumentation.setTracerProvider(provider)
-
-module.exports = { fastifyOtelInstrumentation }
-
-// ... in your Fastify definition
-const { fastifyOtelInstrumentation } = require('./otel.js');
-const Fastify = require('fastify');
-
-const app = fastify();
-// It is necessary to await for its register as it requires to be able
-// to intercept all route definitions
-await app.register(fastifyOtelInstrumentation.plugin());
-
-// automatically all your routes will be instrumented
-app.get('/', () => 'hello world')
-// as well as your instance level hooks.
-app.addHook('onError', () => /* do something */)
-// Manually skip telemetry for a specific route
-app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
-// Keep request and handler spans but skip lifecycle hook spans on a route
-app.get('/api', { config: { otel: { instrumentHooks: false } } }, () => 'ok')
-// Keep the request span but skip the handler child span on a route
-app.get('/health', { config: { otel: { instrumentHandler: false } } }, () => 'ok')
-
-// you can also scope your instrumentation to only be enabled on a sub context
-// of your application
-app.register((instance, opts, done) => {
-    instance.register(fastifyOtelInstrumentation.plugin());
-    // If only enabled in your encapsulated context
-    // the parent context won't be instrumented
-    app.get('/', () => 'hello world')
-
-    done()
-}, { prefix: '/nested' })
-```
-
-If the main request handler is not of the form `(request, reply)` (for example, `@fastify/websocket`
-handlers take the form `(socket, request)`), the plugin attempts to find the Fastify request object
-in any of the handler's arguments. If no request object can be found, instrumentation is skipped and
-a debug level message is logged.
-
-### Registration using OpenTelemetry Node SDK
-
-The plugin can be automatically registered using Node SDK, with `registerOnInitialization` option set to `true`.
-
-```js
-// ... in your OTEL setup
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import FastifyOtelInstrumentation from "@fastify/otel";
-
+// The service name comes from the OpenTelemetry resource: set OTEL_SERVICE_NAME
+// or pass a `resource` to NodeSDK, as per
+// https://opentelemetry.io/docs/languages/sdk-configuration/general/
 const sdk = new NodeSDK({
-  resource: ...,
-  traceExporter: ...,
+  traceExporter: new OTLPTraceExporter(),
   instrumentations: [
-    ...others,
     new FastifyOtelInstrumentation({ registerOnInitialization: true })
-  ],
-});
+  ]
+})
 
-sdk.start();
-
+sdk.start()
 ```
 
-> **Notes**:
->
-> - This instrumentation requires `@opentelemetry/instrumentation-http` to be able to propagate the traces all the way back to upstream
->   - The HTTP instrumentation might cover all your routes although `@fastify/otel` just covers a subset of your application
+To also get the HTTP server span, add `new HttpInstrumentation()` from
+`@opentelemetry/instrumentation-http` to the `instrumentations` array.
 
-### Getting started example
+`app.js`
 
-The [`examples/getting-started`](./examples/getting-started) folder has a runnable setup with the Node SDK and automatic registration. It starts the SDK with `--import` and does not call `register` for the instrumentation:
+```js
+import Fastify from 'fastify'
+
+// No `register` call for the instrumentation: every Fastify instance
+// created after `sdk.start()` is instrumented.
+const app = Fastify()
+
+app.get('/', () => 'hello world')
+
+await app.listen({ port: 3000 })
+```
+
+Start the application loading `otel.js` first:
+
+```sh
+OTEL_SERVICE_NAME=my-server node --import ./otel.js app.js
+```
+
+This setup is available as a runnable project in
+[`examples/getting-started`](./examples/getting-started):
 
 ```sh
 cd examples/getting-started
 npm install
 npm start
 ```
+
+### Manual registration
+
+Register the plugin yourself when you want to instrument only some Fastify instances or encapsulated
+contexts, or when you do not use `NodeSDK`.
+
+`setTracerProvider(provider)` is the standard OpenTelemetry instrumentation method that tells the
+instrumentation which tracer provider creates its spans. The provider is the object of your
+OpenTelemetry SDK that owns the span processors and the exporters.
+
+- If a global tracer provider is registered (`NodeSDK` does it, as well as
+  `trace.setGlobalTracerProvider(provider)`), the instrumentation uses it and `setTracerProvider` is
+  optional.
+- If there is no global provider, or you want this instrumentation to use a different one, pass it with
+  `setTracerProvider`.
+- If there is no provider at all, no span is created.
+
+Create the instrumentation in your OpenTelemetry setup file, give it the tracer provider and export it.
+Then register its plugin before defining routes and other plugins, because it has to intercept all route
+definitions:
+
+```js
+import Fastify from 'fastify'
+import { fastifyOtelInstrumentation } from './otel.js'
+
+const app = Fastify()
+await app.register(fastifyOtelInstrumentation.plugin())
+
+// Routes and instance hooks defined from here on are instrumented
+app.get('/', () => 'hello world')
+// Skip telemetry for a specific route
+app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
+```
+
+The complete setup, with the tracer provider created without `NodeSDK` and the per-route options, is a
+runnable project in [`examples/manual-registration`](./examples/manual-registration).
+
+The instrumentation can also be scoped to an encapsulated context. In that case do not register it on
+the parent instance, which is not instrumented:
+
+```js
+app.register(async function nested (instance) {
+  await instance.register(fastifyOtelInstrumentation.plugin())
+
+  // Only the routes of this context are instrumented
+  instance.get('/', () => 'hello world')
+}, { prefix: '/nested' })
+```
+
+### Handlers with a different signature
+
+If the main request handler is not of the form `(request, reply)` (for example, `@fastify/websocket`
+handlers take the form `(socket, request)`), the plugin attempts to find the Fastify request object
+in any of the handler's arguments. If no request object can be found, instrumentation is skipped and
+a debug level message is logged.
+
+### Enabling, disabling and debugging
+
+`FastifyOtelInstrumentation` extends the OpenTelemetry `InstrumentationBase` class, so it has the standard
+`enable()`, `disable()` and `setTracerProvider()` methods. It is enabled by default. While it is
+disabled no span is created, even if the plugin is registered.
+
+Skipped routes, ignored paths and handlers called without a Fastify request are reported at debug level
+through the OpenTelemetry diagnostic logger, under the `@fastify/otel` namespace. With `NodeSDK` you can
+see them by setting `OTEL_LOG_LEVEL=debug`.
+
+### TypeScript
+
+The package exports the class both as default and as named export, together with its types:
+
+```ts
+import {
+  FastifyOtelInstrumentation,
+  type FastifyOtelInstrumentationOpts,
+  type FastifyOtelRequestContext,
+  type FastifyOtelRouteConfig,
+  type FastifyOtelLifecycleHookInfo,
+  type FastifyOtelHookName
+} from '@fastify/otel'
+```
+
+Importing it also types `request.opentelemetry()` and the `otel` property of the route `config`.
 
 For more information about OpenTelemetry, please refer to the [OpenTelemetry JavaScript](https://opentelemetry.io/docs/languages/js/) documentation.
 
@@ -160,12 +297,7 @@ The carrier object can be any object that can hold key-value pairs, such as an H
 The extracted context can be used as a parent span for a new span.
 
 ```js
-const { fastifyOtelInstrumentation } = require('./otel.js');
-const Fastify = require('fastify');
-
-const app = fastify();
-await app.register(fastifyOtelInstrumentation.plugin());
-
+// `app` is a Fastify instance with the plugin registered, see Setup
 app.get('/', (req, reply) => {
   const otel = req.opentelemetry();
 
@@ -175,17 +307,22 @@ app.get('/', (req, reply) => {
 
   const { context, tracer, span, inject, extract } = otel;
 
-  // Extract a parent span from the request headers
-  const parentCxt = extract(req.headers);
+  // Add an attribute to the request span
+  span.setAttribute('app.tenant', 'acme');
 
-  // Create a new span
-  const newSpan = tracer.startSpan('my-new-span', {
-    parent: parentCxt,
-  });
+  // Create a new span as a child of the request span.
+  // The parent is taken from the context passed as third argument
+  const newSpan = tracer.startSpan('my-new-span', {}, context);
   // Do some work
   newSpan.end();
 
-  // Inject the new span into the response headers
+  // Extract the trace context sent by the caller from the request headers
+  const callerContext = extract(req.headers);
+  // and use it as parent instead, for example for a span linked to the caller
+  const callerSpan = tracer.startSpan('caller-child-span', {}, callerContext);
+  callerSpan.end();
+
+  // Inject the trace context of the request span into the response headers
   const carrier = {};
   inject(carrier);
 
@@ -209,18 +346,28 @@ Whether to register the plugin on initialization. If set to `true`, the plugin w
 
 This is useful for applications that want to ensure that all routes are instrumented without having to manually register the plugin.
 
+Do not call `app.register(instrumentation.plugin())` when this option is `true`: the plugin would be registered twice and Fastify throws `FST_ERR_DEC_ALREADY_PRESENT`. See [Setup](#setup).
+
 #### `FastifyOtelInstrumentationOptions#ignorePaths: string | function`
 
 String or function to ignore paths from being instrumented.
 
 If a string is provided, it will be used as a glob match pattern.
 
-If a function is provided, it will be called with the request options and should return true if the path should be ignored.
+If a function is provided, it will be called with an object that has the `url` and `method` properties and should return true if the path should be ignored.
+
+When the option is not set, the value of the `OTEL_FASTIFY_IGNORE_PATHS` environment variable is used as glob pattern:
+
+```sh
+OTEL_FASTIFY_IGNORE_PATHS='/health/*' node --import ./otel.js app.js
+```
+
+Any other value, including an empty string, throws a `TypeError`.
 
 #### `FastifyOtelInstrumentationOptions#requestHook: function`
 A **synchronous** callback that runs immediately after the root request span is created.
 * **span** – the newly-created `Span`
-* **info.request** – the current `FastifyRequest`
+* **request** – the current `FastifyRequest`
 
 Use it to add custom attributes, events, or rename the span.
 If the function throws, the error is caught and logged so the request flow is never interrupted.
@@ -273,6 +420,8 @@ Per-route override via `config.otel`:
 
 Precedence: `otel: false`, then route `otel.instrumentHooks` when set, otherwise the global `instrumentHooks` option.
 
+The global option throws a `TypeError` when it is not a boolean or a non-empty array of known hook names. The per-route option never throws: unknown hook names are ignored, and an invalid value is treated as `false`.
+
 ```js
 const otel = new FastifyOtelInstrumentation({ instrumentHooks: false })
 app.get('/debug', { config: { otel: { instrumentHooks: ['onRequest'] } } }, handler)
@@ -282,7 +431,7 @@ app.get('/debug', { config: { otel: { instrumentHooks: ['onRequest'] } } }, hand
 
 Control whether the Fastify route handler receives a child span. Defaults to `true`.
 
-Set `instrumentHandler: false` globally to keep request spans without route handler child spans. A route can override the global setting with `config.otel.instrumentHandler`. Setting `otel: false` still disables all OpenTelemetry spans for the route.
+Set `instrumentHandler: false` globally to keep request spans without route handler child spans. A non-boolean value throws a `TypeError`. A route can override the global setting with `config.otel.instrumentHandler`. Setting `otel: false` still disables all OpenTelemetry spans for the route.
 
 ```js
 const otel = new FastifyOtelInstrumentation({ instrumentHandler: false })
@@ -314,7 +463,7 @@ const otel = new FastifyOtelInstrumentation({
 #### `FastifyOtelInstrumentationOptions#recordExceptions: boolean`
 
 Control whether the instrumentation automatically calls `span.recordException` when a handler or hook throws.
-Defaults to `true`, recording every exception. Set it to `false` if you prefer to record only the
+Defaults to `true`, recording every exception. A non-boolean value throws a `TypeError`. Set it to `false` if you prefer to record only the
 exceptions that you consider actionable (for example to avoid noisy `4xx` entries in Datadog Error Tracking).
 
 When enabled, an exception thrown by an instrumented handler or hook is recorded once on the span where it
