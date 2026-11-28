@@ -1,8 +1,6 @@
-'use strict'
-
-const { NodeSDK } = require('@opentelemetry/sdk-node')
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http')
-const { FastifyOtelInstrumentation } = require('@fastify/otel')
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { FastifyOtelInstrumentation } from '@fastify/otel'
 
 const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter(),

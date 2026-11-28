@@ -16,7 +16,16 @@ Requires Node.js >=22.15.0, OpenTelemetry API 1.10.x and SDK 3.x.
 Use SDK-generation 0.300.x packages for experimental OpenTelemetry packages,
 including `sdk-node` and `instrumentation-http`.
 
-Supports Fastify `>=4.0.0`.
+### Compatibility
+
+| Plugin version | Fastify version |
+| -------------- | --------------- |
+| `>=0.2.x`      | `^4.x`, `^5.x`  |
+| `0.1.x`        | `^5.x`          |
+
+Please note that if a Fastify version is out of support, then so are the corresponding versions of this plugin
+in the table above.
+See [Fastify's LTS policy](https://github.com/fastify/fastify/blob/main/docs/Reference/LTS.md) for more details.
 
 ## What it does
 
@@ -107,6 +116,8 @@ In both modes `app.hasPlugin('@fastify/otel')` returns `true`.
 
 In both cases the OpenTelemetry setup lives in its own file and must run before the application code.
 
+The examples use ES modules: set `"type": "module"` in your `package.json` or use the `.mjs` extension.
+
 ### Automatic registration with the Node SDK
 
 This is the recommended setup. `NodeSDK` creates the tracer provider, registers it globally together
@@ -116,11 +127,9 @@ with the context manager and the propagators, and hands the provider to every in
 `otel.js`
 
 ```js
-'use strict'
-
-const { NodeSDK } = require('@opentelemetry/sdk-node')
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http')
-const { FastifyOtelInstrumentation } = require('@fastify/otel')
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { FastifyOtelInstrumentation } from '@fastify/otel'
 
 // The service name comes from the OpenTelemetry resource: set OTEL_SERVICE_NAME
 // or pass a `resource` to NodeSDK, as per
@@ -141,9 +150,7 @@ To also get the HTTP server span, add `new HttpInstrumentation()` from
 `app.js`
 
 ```js
-'use strict'
-
-const Fastify = require('fastify')
+import Fastify from 'fastify'
 
 // No `register` call for the instrumentation: every Fastify instance
 // created after `sdk.start()` is instrumented.
@@ -151,15 +158,13 @@ const app = Fastify()
 
 app.get('/', () => 'hello world')
 
-app.listen({ port: 3000 })
+await app.listen({ port: 3000 })
 ```
 
 Start the application loading `otel.js` first:
 
 ```sh
 OTEL_SERVICE_NAME=my-server node --import ./otel.js app.js
-# or, for CommonJS only
-OTEL_SERVICE_NAME=my-server node --require ./otel.js app.js
 ```
 
 This setup is available as a runnable project in
@@ -187,63 +192,25 @@ OpenTelemetry SDK that owns the span processors and the exporters.
   `setTracerProvider`.
 - If there is no provider at all, no span is created.
 
-`otel.js`
+Create the instrumentation in your OpenTelemetry setup file, give it the tracer provider and export it.
+Then register its plugin before defining routes and other plugins, because it has to intercept all route
+definitions:
 
 ```js
-'use strict'
+import Fastify from 'fastify'
+import { fastifyOtelInstrumentation } from './otel.js'
 
-const { context, propagation, trace } = require('@opentelemetry/api')
-const { AsyncLocalStorageContextManager } = require('@opentelemetry/context-async-hooks')
-const { W3CTraceContextPropagator } = require('@opentelemetry/core')
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http')
-const { BatchSpanProcessor, TracerProvider } = require('@opentelemetry/sdk-trace')
-const { FastifyOtelInstrumentation } = require('@fastify/otel')
+const app = Fastify()
+await app.register(fastifyOtelInstrumentation.plugin())
 
-// This is what NodeSDK does for you
-const provider = new TracerProvider({
-  spanProcessors: [new BatchSpanProcessor({ exporter: new OTLPTraceExporter() })]
-})
-trace.setGlobalTracerProvider(provider)
-propagation.setGlobalPropagator(new W3CTraceContextPropagator())
-context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable())
-
-const fastifyOtelInstrumentation = new FastifyOtelInstrumentation()
-fastifyOtelInstrumentation.setTracerProvider(provider)
-
-module.exports = { fastifyOtelInstrumentation }
+// Routes and instance hooks defined from here on are instrumented
+app.get('/', () => 'hello world')
+// Skip telemetry for a specific route
+app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
 ```
 
-`app.js`
-
-```js
-'use strict'
-
-const { fastifyOtelInstrumentation } = require('./otel.js')
-const Fastify = require('fastify')
-
-async function start () {
-  const app = Fastify()
-
-  // Await the registration before defining routes and other plugins:
-  // the plugin has to intercept all route definitions
-  await app.register(fastifyOtelInstrumentation.plugin())
-
-  // all your routes are instrumented
-  app.get('/', () => 'hello world')
-  // as well as your instance level hooks
-  app.addHook('onError', async () => { /* do something */ })
-  // Skip telemetry for a specific route
-  app.get('/healthcheck', { config: { otel: false } }, () => 'Up!')
-  // Keep request and handler spans but skip lifecycle hook spans on a route
-  app.get('/api', { config: { otel: { instrumentHooks: false } } }, () => 'ok')
-  // Keep the request span but skip the handler child span on a route
-  app.get('/health', { config: { otel: { instrumentHandler: false } } }, () => 'ok')
-
-  await app.listen({ port: 3000 })
-}
-
-start()
-```
+The complete setup, with the tracer provider created without `NodeSDK` and the per-route options, is a
+runnable project in [`examples/manual-registration`](./examples/manual-registration).
 
 The instrumentation can also be scoped to an encapsulated context. In that case do not register it on
 the parent instance, which is not instrumented:

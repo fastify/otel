@@ -1,0 +1,17 @@
+{
+  "name": "fastify-otel-manual-registration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "@fastify/otel": "latest",
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/context-async-hooks": "^3.0.0",
+    "@opentelemetry/core": "^3.0.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.300.0",
+    "@opentelemetry/sdk-trace": "^3.0.0",
+    "fastify": "^5.0.0"
+  }
+}
